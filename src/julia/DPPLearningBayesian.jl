@@ -1,12 +1,7 @@
 module DPPLearningBayesian
 
-# push!(LOAD_PATH, "C:/work/git/setrec/DPP/src/julia")
-
-# using Gadfly
-# using DataFrames
 using HDF5, JLD
 using Distributions
-# using DPPSampling
 using DPPDataPreparation
 using DPPLearning
 
@@ -182,7 +177,7 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
 
     if iterCounter > 2
       isConvergedLogLikelihood(itemTraitMatrix, itemTraitMatrixPrev,
-        trainingInstances, numTrainingInstances, numItems, 1.0e-7)
+        trainingInstances, numTrainingInstances, numItems, 1.0e-7, "training")
     end
 
     # After burn in, collect samples

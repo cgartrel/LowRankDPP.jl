@@ -1,9 +1,5 @@
-# @everywhere module DPPLearning
 module DPPLearning
 
-# push!(LOAD_PATH, "C:/work/git/setrec/DPP/src/julia")
-
-# using DataFrames
 using HDF5, JLD
 
 export computeLogLikelihood, computeGradient, doStochasticGradientAscent,
@@ -207,10 +203,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
 
   paramsMatrix = rand(numItems, numItemTraits) + 1
 
-  # epsFixed = 0.5e-2 # For MS Store dataset
   epsFixed = 0.5e-2
-  # epsInitialDecay = 1.0e-5 # For MS Store dataset
-  # epsInitialDecay = 1.0e-8 # For Xbox games dataset
   epsInitialDecay = 1.0e-5 # For Amazon registry apparel dataset
   eps = epsFixed
 
@@ -230,6 +223,15 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
   currTrainingInstanceIndex = 1
 
   shuffle!(trainingInstances)
+
+  # Set aside one percent of trainingInstances for use as a validation set, for
+  # assessing convergence
+  validationSetSizePercent = 0.01
+  numValidationInstances = convert(Int, round(numTrainingInstances * validationSetSizePercent));
+  validationInstances = fill(Array(Int, 1), numValidationInstances)
+  validationInstances = trainingInstances[1:numValidationInstances]
+  trainingInstances = trainingInstances[(numValidationInstances + 1):numTrainingInstances]
+  numTrainingInstances = numTrainingInstances - numValidationInstances
 
   # Run stochastic gradient ascent until convergence
   while true
@@ -254,10 +256,14 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     @time avgTrainingLogLikelihood =
       computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstances,
                            numItems, numItemTraits) / numTrainingInstances
+   @time avgValidationLogLikelihood =
+     computeLogLikelihood(paramsMatrix, validationInstances, numValidationInstances,
+                          numItems, numItemTraits) / numValidationInstances
     @time avgTestLogLikelihood =
       computeLogLikelihood(paramsMatrix, testInstances, numTestInstances,
                            numItems, numItemTraits) / numTestInstances
     println("avgTrainingLogLikelihood: $avgTrainingLogLikelihood")
+    println("avgValidationLogLikelihood: $avgValidationLogLikelihood")
     println("avgTestLogLikelihood: $avgTestLogLikelihood")
     # push!(avgTrainingLogLikelihoodForEachIter, avgTrainingLogLikelihood)
     # push!(avgTestLogLikelihoodForEachIter, avgTestLogLikelihood)
@@ -274,7 +280,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     end
 
     if isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev,
-      trainingInstances, numTrainingInstances, numItems, 1.0e-5)
+      validationInstances, numValidationInstances, numItems, 1.0e-5, "validation")
       break
     end
 
@@ -322,39 +328,24 @@ function buildMapTrainingInstanceRowIndices(trainingInstances, numTrainingInstan
   return paramsMatrixRowIdicesToTrainingInstanceRowIndicesMat
 end
 
-# Determines if the delta between the log likelihoods for two parameter values
-# indicates convergence.  Used in stochastic gradient ascent implementation.
-# function isConverged(paramsMatrix, paramsMatrixPrev, trainingInstances, numTrainingInstances, numItems)
-#   logLikelihoodParamsMatrix = computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstances,
-#                                                    numItems, 0)
-#   logLikelihoodParamsMatrixPrev = computeLogLikelihood(paramsMatrixPrev, trainingInstances, numTrainingInstances,
-#                                                        numItems, 0)
-#   eps = 1.0e-5
-#   if abs(logLikelihoodParamsMatrix - logLikelihoodParamsMatrixPrev) / abs(logLikelihoodParamsMatrix) <= eps
-#     return true
-#   else
-#     return false
-#   end
-# end
-
-# Determine if we have reached convergence, based on the training log likelihood
+# Determine if we have reached convergence, based on the log likelihood
 # of the V (parameter) matrix.
-function isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev, trainingInstances,
-                                  numTrainingInstances, numItems, eps)
-  logLikelihoodParamsMatrix = computeLogLikelihood(paramsMatrix, trainingInstances,
-                                                   numTrainingInstances, numItems, 0)
-  logLikelihoodParamsMatrixPrev = computeLogLikelihood(paramsMatrixPrev, trainingInstances,
-                                                       numTrainingInstances, numItems, 0)
+function isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev, instances,
+                                  numInstances, numItems, eps, instanceTypeName)
+  logLikelihoodParamsMatrix = computeLogLikelihood(paramsMatrix, instances,
+                                                   numInstances, numItems, 0)
+  logLikelihoodParamsMatrixPrev = computeLogLikelihood(paramsMatrixPrev, instances,
+                                                       numInstances, numItems, 0)
   # eps = 1.0e-7
   relativeChange = abs(logLikelihoodParamsMatrix - logLikelihoodParamsMatrixPrev) / abs(logLikelihoodParamsMatrix)
   relativeChangeSign = ""
   if logLikelihoodParamsMatrix < logLikelihoodParamsMatrixPrev
     relativeChangeSign = "-"
   end
-  println("\t relativeChange in training log likelihood: $relativeChangeSign$relativeChange")
+  println("\t relativeChange in $instanceTypeName log likelihood: $relativeChangeSign$relativeChange")
 
   if relativeChange <= eps
-    println("relativeChange in training log likelihood: $relativeChangeSign$relativeChange, converged")
+    println("relativeChange in $instanceTypeName log likelihood: $relativeChangeSign$relativeChange, converged")
     return true
   else
     return false
@@ -476,7 +467,7 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   println("Number of item trait dimensions: $numItemTraits")
   println("Final avg training log-likelihood: $avgTrainingLogLikelihood")
   println("Final avg test log-likelihood: $avgTestLogLikelihood")
-  println("Diff between avg traing and test log-likelihood: $percentDiffTraingTestLikelihood%")
+  println("Diff between avg training and test log-likelihood: $percentDiffTraingTestLikelihood%")
 
   # Save paramsMatrix to disk, so that we can reuse it later
   if !isdir(learnedModelOutputDirName)
