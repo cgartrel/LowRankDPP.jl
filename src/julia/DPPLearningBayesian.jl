@@ -8,7 +8,6 @@ using DPPLearning
 export runStochasticGradientHamiltonianMonteCarloSampler,
        doDPPBayesianLearningSparseVectorData
 
-
 # Computes the gradient of the log-prior density
 function computePriorGradient(paramsMatrix, numItems, numItemTraits,
                               gaussianPriorPrecisions)
@@ -176,6 +175,8 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
     end
 
     if iterCounter > 2
+      # Tracking training log likelihood is not a "true" measure of convergence
+      # here, but provides a useful heuristic
       isConvergedLogLikelihood(itemTraitMatrix, itemTraitMatrixPrev,
         trainingInstances, numTrainingInstances, numItems, 1.0e-7, "training")
     end
@@ -202,30 +203,6 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
   end
 end
 
-# Determine if we have reached convergence, based on the training log likelihood
-# of the V (parameter) matrix.
-# function isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev, trainingInstances,
-#                                   numTrainingInstances, numItems)
-#   logLikelihoodParamsMatrix = computeLogLikelihood(paramsMatrix, trainingInstances,
-#                                                    numTrainingInstances, numItems, 0)
-#   logLikelihoodParamsMatrixPrev = computeLogLikelihood(paramsMatrixPrev, trainingInstances,
-#                                                        numTrainingInstances, numItems, 0)
-#   eps = 1.0e-7
-#   relativeChange = abs(logLikelihoodParamsMatrix - logLikelihoodParamsMatrixPrev) / abs(logLikelihoodParamsMatrix)
-#   relativeChangeSign = ""
-#   if logLikelihoodParamsMatrix < logLikelihoodParamsMatrixPrev
-#     relativeChangeSign = "-"
-#   end
-#   println("\t relativeChange in training log likelihood: $relativeChangeSign$relativeChange")
-#
-#   if relativeChange <= eps
-#     println("relativeChange in training log likelihood: $relativeChangeSign$relativeChange, converged")
-#     return true
-#   else
-#     return false
-#   end
-# end
-
 # Performs learning for the Bayesian low-rank DPP model, using an MCMC sampler
 # function, on a dataset in sparse vector format.
 function doDPPBayesianLearningSparseVectorData(trainingBasketsDictFileName,
@@ -235,23 +212,15 @@ function doDPPBayesianLearningSparseVectorData(trainingBasketsDictFileName,
   initialItemTraitMatrxObjectName = -1)
   srand(1234)
 
-  # cd("$(homedir())\\MS-store")
-
   # Load training data
   trainingBasketsDict = load(trainingBasketsDictFileName,
                                   trainingBasketsDictObjectName)
   println("Loaded $trainingBasketsDictFileName")
-  # trainingBasketsDict = load("MSStore-training-basketsDict.jld",
-  #                            "trainingBasketsDict")
-  # println("Loaded MSStore-training-basketsDict.jld")
 
   # Load test data
   testBasketsDict = load(testBasketsDictFileName,
                               testBasketsDictObjectName)
   println("Loaded $testBasketsDictFileName")
-  # testBasketsDict = load("MSStore-test-basketsDict.jld",
-  #                        "testBasketsDict")
-  # println("Loaded MSStore-test-basketsDict.jld")
 
   # Build set of training instances
   numTrainingInstances = length(collect(keys(trainingBasketsDict)))
@@ -284,7 +253,7 @@ function doDPPBayesianLearningSparseVectorData(trainingBasketsDictFileName,
     testInstanceIndex += 1
   end
 
-  # Initialize itemTraitMatrix to MAP estimate
+  # Initialize itemTraitMatrix, if provided
   itemTraitMatrixInit = -1
   if initialItemTraitMatrxFileName != -1
     itemTraitMatrixInit = load(initialItemTraitMatrxFileName, initialItemTraitMatrxObjectName)
@@ -292,7 +261,6 @@ function doDPPBayesianLearningSparseVectorData(trainingBasketsDictFileName,
   end
 
   # Run sampler to learn the posterior on the low-rank DPP parameters (V matrix)
-  # numItemTraits = 15
   runSamplerFunction(trainingInstances, numTrainingInstances, numItems,
     numItemTraits, testInstances, numTestInstances, learnedModelOutputDirName,
     itemTraitMatrixInit)

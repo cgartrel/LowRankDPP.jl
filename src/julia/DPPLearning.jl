@@ -54,15 +54,14 @@ function computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstan
   # Full log-likelihood
   logLikelihood = firstTerm - secondTerm - thirdTerm
 
-#   println("log-likelihood: $logLikelihood")
-
   return logLikelihood
 end
 
-# Computes the gradient of the log-likelihood for the DPP with parameters paramsMatrix.
-# The gradient for each parameter (element of paramsMatrix) is computed with
-# respect to that parameter.  We exploit the structure of the matrices and
-# derivatives to speed up the computation of the gradient.
+# Computes the gradient of the log-likelihood for the low-rank DPP with
+# parameters paramsMatrix. The gradient for each parameter (element of
+# paramsMatrix) is computed with respect to that parameter.  We exploit the
+# structure of the matrices and derivatives to speed up the computation of the
+# gradient.
 function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
                          numItems, numItemTraits, lambdaVec = 0, alpha = 0,
                          paramsMatrixRowIdicesToTrainingInstanceRowIndices = 0)
@@ -151,8 +150,6 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
               itemTraitMatrixInstance[i, paramsMatrixColIndex]
           end
 
-          # @inbounds traceFirstTerm = (lMatrixTrainingInstanceInverse[trainingInstanceRowIndex, :] *
-          #   itemTraitMatrixInstance[:, paramsMatrixColIndex] + sumTraceFirstTerm)[1]
           @inbounds traceFirstTerm = dot(lMatrixTrainingInstanceInverse[trainingInstanceRowIndex, :],
             itemTraitMatrixInstance[:, paramsMatrixColIndex]) + sumTraceFirstTerm
         end
@@ -195,7 +192,7 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
   return paramsMatrixGradient
 end
 
-# Performs stochastic gradient ascent to learn DPP kernel parameters.
+# Performs stochastic gradient ascent to learn low-rank DPP kernel parameters.
 function doStochasticGradientAscent(trainingInstances, numTrainingInstances, numItems,
                           numItemTraits, testInstances, numTestInstances, lambdaVec, alpha)
   gradient = zeros(numItems, numItemTraits)
@@ -217,7 +214,6 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
   delta = zeros(numItems, numItemTraits)
 
   # Number of training instances to process per minibatch
-  # minibatchSize = 1000 # For MS Store dataset
   minibatchSize = 1000
 
   currTrainingInstanceIndex = 1
@@ -265,8 +261,6 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     println("avgTrainingLogLikelihood: $avgTrainingLogLikelihood")
     println("avgValidationLogLikelihood: $avgValidationLogLikelihood")
     println("avgTestLogLikelihood: $avgTestLogLikelihood")
-    # push!(avgTrainingLogLikelihoodForEachIter, avgTrainingLogLikelihood)
-    # push!(avgTestLogLikelihoodForEachIter, avgTestLogLikelihood)
 
     numIterationsCompleted += 1
     if numIterationsCompleted % 1 == 0
@@ -299,11 +293,6 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
       shuffle!(trainingInstances)
     end
   end
-
-  # println("avgTrainingLogLikelihoodForEachIter: $avgTrainingLogLikelihoodForEachIter")
-  # println("avgTestLogLikelihoodForEachIter: $avgTestLogLikelihoodForEachIter")
-
-  # save("learnedDPPParamsMatrix-k$numItemTraits-lambdaPop$alpha-$numIterationsCompleted.jld", "learnedParamsMatrix", paramsMatrix)
 
   return paramsMatrix
 end
@@ -352,8 +341,8 @@ function isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev, instances,
   end
 end
 
-# Performs DPP model learning, with item-popularity regularization, on a dataset
-# in sparse vector format
+# Performs low-rank DPP model learning, with item-popularity regularization, on
+# a dataset in sparse vector format.
 function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBasketsDictObjectName,
                                        testBasketsDictFileName, testBasketsDictObjectName,
                                        learnedModelOutputDirName, numItemTraits,
@@ -368,17 +357,11 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   trainingUsersBasketsDict = load(trainingBasketsDictFileName,
                                   trainingBasketsDictObjectName)
   println("Loaded $trainingBasketsDictFileName")
-  # trainingUsersBasketsDict = load("retail-training-basketsDict.jld",
-  #                                  "trainingBasketsDict")
-  # println("Loaded retail-training-basketsDict.jld")
 
   # Load test data
   testUsersBasketsDict = load(testBasketsDictFileName,
                               testBasketsDictObjectName)
   println("Loaded $testBasketsDictFileName")
-  # testUsersBasketsDict = load("retail-test-basketsDict.jld",
-  #                             "testBasketsDict")
-  # println("Loaded retail-test-basketsDict.jld")
 
   # Build set of training instances
   numTrainingInstances = length(collect(keys(trainingUsersBasketsDict)))
@@ -448,8 +431,6 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   println("Beginning stochastic gradient ascent...")
 
   # Perform stochastic gradient ascent to learn the DPP kernel parameters (item trait vectors)
-  # numItemTraits = 76
-  # alpha = 1.0
   paramsMatrix = doStochasticGradientAscent(trainingInstances, numTrainingInstances,
                                             numItems, numItemTraits, testInstances,
                                             numTestInstances, lambdaVec, alpha)
@@ -473,8 +454,8 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   if !isdir(learnedModelOutputDirName)
     mkdir(learnedModelOutputDirName)
   end
-  # cd(learnedModelOutputDirName)
-  save("$learnedModelOutputDirName/learnedDPPParamsMatrix-k$numItemTraits-lambdaPop$alpha.jld", "learnedParamsMatrix", paramsMatrix)
+  save("$learnedModelOutputDirName/learnedDPPParamsMatrix-k$numItemTraits-lambdaPop$alpha.jld",
+    "learnedParamsMatrix", paramsMatrix)
 end
 
 end

@@ -133,7 +133,6 @@ end
 function computePredictionsSparseVectorData(testBasketsDictFileName,
   testBasketsDictObjectName, learnedDPPParamsFileName,
   resultsForTestInstancesDictFileName, learnedDPPParamsObjectName = "learnedParamsMatrix")
-  # learnedDPPParamsObjectName = "learnedParamsMatrix"
   srand(1234)
 
   testUsersBasketsDict = load(testBasketsDictFileName, testBasketsDictObjectName)
@@ -210,7 +209,7 @@ function computePredictionsSparseVectorData(testBasketsDictFileName,
   averagePredictionTimePerTestInstance = elapsedPredictionTime / numDistinctTestInstances
   println("averagePredictionTimePerTestInstance = $averagePredictionTimePerTestInstance")
 
-  # Save expectedValuePredictionResultsForSamples
+  # Save resultsForTestInstancesDict
   save(resultsForTestInstancesDictFileName, "resultsForTestInstancesDict",
     resultsForTestInstancesDict)
   println("Saved $resultsForTestInstancesDictFileName")
@@ -229,13 +228,11 @@ function computePredictionsForMCMCSamples(testBasketsDictFileName,
   learnedDPPParamsObjectName = "itemTraitMatrixSample"
   # Select MCMC samples to use for computing predictions, according to
   # contents of collectedMCMCSamplesDirPathName and sampleLag
-  # cd(collectedMCMCSamplesDirPathName)
   collectedSamplesFileNamesVec = readdir(collectedMCMCSamplesDirPathName)
   sort!(collectedSamplesFileNamesVec, by = getSampleNumberFromSampleFileName)
   numCollectedSamples = length(collectedSamplesFileNamesVec)
   numSamplesForComputingPredictions = round(Int, numCollectedSamples / sampleLag)
   samplesForComputingPredictionsFileNames = Array{String}(numSamplesForComputingPredictions)
-  # samplesForComputingPredictionsFileNames[1] = abspath(collectedSamplesFileNamesVec[1])
   samplesForComputingPredictionsFileNames[1] = "$collectedMCMCSamplesDirPathName/$(collectedSamplesFileNamesVec[1])"
   samplesForComputingPredictionsFileNamesIndex = 2
   for i = 0:sampleLag:numCollectedSamples
@@ -243,8 +240,6 @@ function computePredictionsForMCMCSamples(testBasketsDictFileName,
       continue
     end
 
-    # samplesForComputingPredictionsFileNames[samplesForComputingPredictionsFileNamesIndex] =
-    #   abspath(collectedSamplesFileNamesVec[i])
     samplesForComputingPredictionsFileNames[samplesForComputingPredictionsFileNamesIndex] =
       "$collectedMCMCSamplesDirPathName/$(collectedSamplesFileNamesVec[i])"
 
@@ -321,7 +316,6 @@ function computePredictionsForMCMCSamples(testBasketsDictFileName,
       # Add probabilities in log space
       for sampleIndex = 1:numSamplesForComputingPredictions
         nextItemProb = predictionResultsForSamples[sampleIndex][testInstance].nextItemsProbs[nextItemId]
-        # println("nextItemProb: $nextItemProb, maxLogProbNextItem: $maxLogProbNextItem")
 
         partialSumPredictionResultsForSamplesForNextItemId +=
           exp(log(nextItemProb) - maxLogProbNextItem)
@@ -354,6 +348,5 @@ function getSampleNumberFromSampleFileName(sampleFileName)
   numberString = split(sampleNumberPart, ".")[1]
   return parse(Int, numberString)
 end
-
 
 end

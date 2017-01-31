@@ -8,8 +8,12 @@ using DPPLearningBayesian
 using DPPPrediction
 using DPPEvaluation
 
+export convertCsvToBasketsExample, dppLearningExample,
+  dppLearningBayesianExample, predictionExample,
+  predictionForMCMCSamplesExample, predictionMetricsExample
+
 # An example of converting a file in sparse CSV basket format to the data
-# format expected by the DPP learning implementations
+# format expected by the DPP modules.
 function convertCsvToBasketsExample()
   dataDir = "../../data/Amazon-baby-registry"
   csvBasketDataFileName = "$dataDir/1_100_100_100_apparel_regs.csv"
