@@ -1,3 +1,5 @@
+[![Travis](https://travis-ci.org/cgartrel/LowRankDPP.jl.svg?branch=master)](https://travis-ci.org/cgartrel/LowRankDPP.jl)
+
 # Low-rank DPP Learning and Prediction
 Julia implementation of low-rank determinantal point process (DPP) learning and
 prediction algorithms.  Two learning algorithms are provided: the first is an
