@@ -1,5 +1,3 @@
-module DPPDataPreparation
-
 using JLD
 using Base.Random.uuid1
 
@@ -104,13 +102,13 @@ function convertSparseCsvToBaskets(csvBasketDataFileName,
   println("Num baskets in test set: $(length(collect(keys(testBasketsDict))))")
 
   jldopen(trainingBasketsDictFileName, "w") do file
-    addrequire(file, DPPDataPreparation)
+    addrequire(file, LowRankDPP)
     write(file, "trainingBasketsDict", trainingBasketsDict)
   end
   println("Saved trainingBasketsDict")
 
   jldopen(testBasketsDictFileName, "w") do file
-    addrequire(file, DPPDataPreparation)
+    addrequire(file, LowRankDPP)
     write(file, "testBasketsDict", testBasketsDict)
   end
   println("Saved testBasketsDict")
@@ -135,6 +133,4 @@ function convertBasketsToSparseCsv(basketsDictFileName, basketsDictObjectName,
     write(csvBasketDataFile, join(sort(basketArray), " "), "\n")
   end
   close(csvBasketDataFile)
-end
-
 end

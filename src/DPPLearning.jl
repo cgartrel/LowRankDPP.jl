@@ -1,5 +1,3 @@
-module DPPLearning
-
 using HDF5, JLD
 
 export computeLogLikelihood, computeGradient, doStochasticGradientAscent,
@@ -456,6 +454,4 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   end
   save("$learnedModelOutputDirName/learnedDPPParamsMatrix-k$numItemTraits-lambdaPop$alpha.jld",
     "learnedParamsMatrix", paramsMatrix)
-end
-
 end

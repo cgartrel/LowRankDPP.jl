@@ -1,9 +1,5 @@
-module DPPLearningBayesian
-
 using HDF5, JLD
 using Distributions
-using DPPDataPreparation
-using DPPLearning
 
 export runStochasticGradientHamiltonianMonteCarloSampler,
        doDPPBayesianLearningSparseVectorData
@@ -264,6 +260,4 @@ function doDPPBayesianLearningSparseVectorData(trainingBasketsDictFileName,
   runSamplerFunction(trainingInstances, numTrainingInstances, numItems,
     numItemTraits, testInstances, numTestInstances, learnedModelOutputDirName,
     itemTraitMatrixInit)
-end
-
 end

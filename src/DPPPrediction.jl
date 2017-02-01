@@ -1,5 +1,3 @@
-module DPPPrediction
-
 using JLD
 
 export TestResult, BasketSizeResult, conditionDPPOnItemsObservedLowRank,
@@ -347,6 +345,4 @@ function getSampleNumberFromSampleFileName(sampleFileName)
   sampleNumberPart = sampleFileNameParts[length(sampleFileNameParts)]
   numberString = split(sampleNumberPart, ".")[1]
   return parse(Int, numberString)
-end
-
 end

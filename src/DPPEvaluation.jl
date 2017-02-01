@@ -1,7 +1,4 @@
-module DPPEvaluation
-
 using JLD
-using DPPPrediction
 
 export computePredictionMetricsSparseVectorData
 
@@ -264,6 +261,4 @@ function computePopularityWeightedPrecisionAtK(itemPopWeights, resultsForTestIns
 
   popWeightedPrecisionAtKPercent = popWeightedHits / sumPopWeightsForTestRatings * 100
   return popWeightedPrecisionAtKPercent
-end
-
 end

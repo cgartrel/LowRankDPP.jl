@@ -1,21 +1,12 @@
-module DPPExamples
-
-push!(LOAD_PATH, ".")
-
-using DPPDataPreparation
-using DPPLearning
-using DPPLearningBayesian
-using DPPPrediction
-using DPPEvaluation
-
 export convertCsvToBasketsExample, dppLearningExample,
   dppLearningBayesianExample, predictionExample,
   predictionForMCMCSamplesExample, predictionMetricsExample
 
+dataDir = "data/Amazon-baby-registry"
+
 # An example of converting a file in sparse CSV basket format to the data
 # format expected by the DPP modules.
 function convertCsvToBasketsExample()
-  dataDir = "../data/Amazon-baby-registry"
   csvBasketDataFileName = "$dataDir/1_100_100_100_apparel_regs.csv"
   trainingBasketsDictFileName = "$dataDir/apparel-regs-training-basketsDict.jld"
   testBasketsDictFileName = "$dataDir/apparel-regs-test-basketsDict.jld"
@@ -27,7 +18,6 @@ end
 
 # An example of using stochastic gradient ascent for DPP learning
 function dppLearningExample()
-  dataDir = "../data/Amazon-baby-registry"
   trainingBasketsDictFileName = "$dataDir/apparel-regs-training-basketsDict.jld"
   trainingBasketsDictObjectName = "trainingBasketsDict"
   testBasketsDictFileName = "$dataDir/apparel-regs-test-basketsDict.jld"
@@ -44,7 +34,6 @@ end
 
 # An example of using stochastic gradient HMC for DPP learning
 function dppLearningBayesianExample()
-  dataDir = "../data/Amazon-baby-registry"
   trainingBasketsDictFileName = "$dataDir/apparel-regs-training-basketsDict.jld"
   trainingBasketsDictObjectName = "trainingBasketsDict"
   testBasketsDictFileName = "$dataDir/apparel-regs-test-basketsDict.jld"
@@ -61,7 +50,6 @@ end
 # An example of computing predictions using a DPP model learned by stochastic
 # gradient ascent
 function predictionExample()
-  dataDir = "../data/Amazon-baby-registry"
   testBasketsDictFileName = "$dataDir/apparel-regs-test-basketsDict.jld"
   testBasketsDictObjectName = "testBasketsDict"
   numItemTraits = 30
@@ -78,7 +66,6 @@ end
 # An example of computing predictions using a DPP model learned by stochastic
 # gradient HMC
 function predictionForMCMCSamplesExample()
-  dataDir = "../data/Amazon-baby-registry"
   testBasketsDictFileName = "$dataDir/apparel-regs-test-basketsDict.jld"
   testBasketsDictObjectName = "testBasketsDict"
   numItemTraits = 30
@@ -95,7 +82,6 @@ end
 
 # An example of computing prediction metrics using DPP model prediction results
 function predictionMetricsExample()
-  dataDir = "../data/Amazon-baby-registry"
   trainingBasketsDictFileName = "$dataDir/apparel-regs-training-basketsDict.jld"
   trainingBasketsDictObjectName = "trainingBasketsDict"
   testBasketsDictFileName = "$dataDir/apparel-regs-test-basketsDict.jld"
@@ -114,11 +100,9 @@ end
 # convertCsvToBasketsExample()
 # dppLearningExample()
 # predictionExample()
-predictionMetricsExample()
+# predictionMetricsExample()
 
 # Bayesian learning pipeline:
 # dppLearningBayesianExample()
 # predictionForMCMCSamplesExample()
 # predictionMetricsExample()
-
-end
