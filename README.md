@@ -30,11 +30,10 @@ learning algorithms, and compute prediction metrics (mean percentile rank and
 precision@N).
 
 To run the examples for the full CSV data conversion, learning, prediction, and
-prediction metrics pipeline for SGA-based models, call the following functions
-from
-`DPPExamples.jl`:
+prediction metrics pipeline for SGA-based models, use the following functions
+from `DPPExamples.jl`:
 ```Julia
-using DPPExamples
+using LowRankDPP
 
 convertCsvToBasketsExample()
 dppLearningExample()
@@ -43,9 +42,9 @@ predictionMetricsExample()
 ```
 
 To run the examples for the learning and prediction pipeline for SGHMC-based
-models, call the following functions from `DPPExamples.jl`:
+models, use the following functions from `DPPExamples.jl`:
 ```Julia
-using DPPExamples
+using LowRankDPP
 
 dppLearningBayesianExample()
 predictionForMCMCSamplesExample()
@@ -55,10 +54,10 @@ The provided hyperparameter settings of the learning algorithms should work for
 most of the included Amazon baby registry data.  However, these hyperparameters
 will likely need to be tuned for other datasets.  In particular, the `epsFixed`,
 `epsInitialDecay`, and `numIterationsFixedEps` settings in
-`DPPLearning.doStochasticGradientAscent` will need to be tuned to ensure proper
+`doStochasticGradientAscent` (from `DPPLearning.jl`) will need to be tuned to ensure proper
 convergence to a local maximum for SGA learning, while the `stepSizeLarger`,
 `stepSizeIntermediate`, `stepSizeSmaller`, `numIterationsLargerStepSize`, and
 `numIterationsIntermediateStepSize` settings in
-`DPPLearningBayesian.runStochasticGradientHamiltonianMonteCarloSampler` will
+`runStochasticGradientHamiltonianMonteCarloSampler` (from `DPPLearningBayesian.jl`) will
 need to be tuned to ensure proper convergence to a local mode for SGHMC
 learning.      
