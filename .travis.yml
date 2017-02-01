@@ -1,9 +1,11 @@
 language: julia
 os:
-    - linux
-  allow_failures:
     - osx
+    - linux
 julia:
     - 0.5
 notifications:
   email: false
+matrix:
+  allow_failures:
+    - os: osx
