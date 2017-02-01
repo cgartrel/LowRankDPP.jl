@@ -30,18 +30,23 @@ learning algorithms, and compute prediction metrics (mean percentile rank and
 precision@N).
 
 To run the examples for the full CSV data conversion, learning, prediction, and
-prediction metrics pipeline for SGA learning, call the following from
+prediction metrics pipeline for SGA-based models, call the following functions
+from
 `DPPExamples.jl`:
 ```Julia
+using DPPExamples
+
 convertCsvToBasketsExample()
 dppLearningExample()
 predictionExample()
 predictionMetricsExample()
 ```
 
-To run the examples for the learning and prediction pipeline for SGHMC learning,
-call the following from `DPPExamples.jl`:
+To run the examples for the learning and prediction pipeline for SGHMC-based
+models, call the following functions from `DPPExamples.jl`:
 ```Julia
+using DPPExamples
+
 dppLearningBayesianExample()
 predictionForMCMCSamplesExample()
 ```
