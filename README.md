@@ -54,10 +54,10 @@ The provided hyperparameter settings of the learning algorithms should work for
 most of the included Amazon baby registry data.  However, these hyperparameters
 will likely need to be tuned for other datasets.  In particular, the `epsFixed`,
 `epsInitialDecay`, and `numIterationsFixedEps` settings in
-`doStochasticGradientAscent` (from `DPPLearning.jl`) will need to be tuned to ensure proper
-convergence to a local maximum for SGA learning, while the `stepSizeLarger`,
-`stepSizeIntermediate`, `stepSizeSmaller`, `numIterationsLargerStepSize`, and
-`numIterationsIntermediateStepSize` settings in
-`runStochasticGradientHamiltonianMonteCarloSampler` (from `DPPLearningBayesian.jl`) will
-need to be tuned to ensure proper convergence to a local mode for SGHMC
-learning.      
+`doStochasticGradientAscent` (from `DPPLearning.jl`) will need to be tuned to
+ensure proper convergence to a local maximum for SGA learning, while the
+`stepSizeLarger`, `stepSizeIntermediate`, `stepSizeSmaller`,
+`numIterationsLargerStepSize`, and `numIterationsIntermediateStepSize` settings
+in `runStochasticGradientHamiltonianMonteCarloSampler` (from
+`DPPLearningBayesian.jl`) will need to be tuned to ensure proper convergence to
+a local mode for SGHMC learning.      
