@@ -9,9 +9,9 @@ Carlo (SGHMC).
 
 For details on low-rank DPPs, including SGA-based learning and prediction, see
 the [Low-Rank Factorization of Determinantal Point
-Processes](http://ulrichpaquet.com/Papers/LowRankDPP2017.pdf) paper.  For more
+Processes](http://ulrichpaquet.com/Papers/LowRankDPP2017.pdf) paper ([slides](https://drive.google.com/open?id=0BzbRNlai9LOqZGNKV0s4WnF6U2s)).  For more
 on Bayesian low-rank DPPs, see the [Bayesian Low-Rank Determinantal Point
-Processes](http://ulrichpaquet.com/Papers/RecSys-2016-DPP.pdf) paper.
+Processes](http://ulrichpaquet.com/Papers/RecSys-2016-DPP.pdf) paper ([slides](https://drive.google.com/open?id=0BzbRNlai9LOqNFpZUVd1b3QyMDA)).
 
 ## Installation
 Within Julia, use the package manager:
