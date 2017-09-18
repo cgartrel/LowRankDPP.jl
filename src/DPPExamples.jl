@@ -90,6 +90,8 @@ function predictionMetricsExample()
   alpha = 1.0
   resultsForTestInstancesDictFileName =
     "example-SGA-model/resultsForTestInstancesDict-k$numItemTraits-lambdaPop$alpha-Amazon-apparel-regs.jld"
+  # resultsForTestInstancesDictFileName =
+  #   "example-SGHMC-model/resultsForTestInstancesDict-k$numItemTraits-collectedSamples-SGHMC-Amazon-apparel-regs.jld"
 
   computePredictionMetricsSparseVectorData(trainingBasketsDictFileName,
     trainingBasketsDictObjectName, testBasketsDictFileName,

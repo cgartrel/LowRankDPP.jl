@@ -1,4 +1,4 @@
-using JLD
+using JLD, DataStructures
 
 export computePredictionMetricsSparseVectorData
 
@@ -13,7 +13,7 @@ function getOrderedItemCountsSparseVectorData(trainingBasketsDictFileName,
 
   # Build set of training instances
   numTrainingInstances = length(collect(keys(trainingUsersBasketsDict)))
-  trainingInstances = fill(Array(Int, 1), numTrainingInstances)
+  trainingInstances = fill(Array{Int}(1), numTrainingInstances)
   trainingInstanceIndex = 1
   numItems = 0
   for trainingInstanceUserId in collect(keys(trainingUsersBasketsDict))
@@ -29,7 +29,7 @@ function getOrderedItemCountsSparseVectorData(trainingBasketsDictFileName,
   end
 
   # Compute ordered item counts, by descending popularity
-  orderedItemCounts = Collections.PriorityQueue(Dict{Int, Int}(), Base.Order.Reverse)
+  orderedItemCounts = PriorityQueue(Dict{Int, Int}(), Base.Order.Reverse)
   for i = 1:numTrainingInstances
     trainingInstance = trainingInstances[i]
 
@@ -59,7 +59,7 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
 
   # Build set of test instances
   numTestInstances = length(collect(keys(testUsersBasketsDict)))
-  testInstances = fill(Array(Int, 1), numTestInstances)
+  testInstances = fill(Array{Int}(1), numTestInstances)
   testInstanceIndex = 1
   numItems = 0
   for testInstanceUserId in collect(keys(testUsersBasketsDict))
@@ -79,7 +79,7 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
   orderedItemCounts = getOrderedItemCountsSparseVectorData(trainingBasketsDictFileName,
                                                            trainingBasketsDictObjectName)
   sumItemCounts = sum(values(orderedItemCounts))
-  itemPopWeights = Collections.PriorityQueue(Dict{Int, Float64}(), Base.Order.Reverse)
+  itemPopWeights = PriorityQueue(Dict{Int, Float64}(), Base.Order.Reverse)
   beta = 0.5
   startingItemId = 1
   for i = startingItemId:numItems

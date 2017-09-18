@@ -220,7 +220,7 @@ function doDPPBayesianLearningSparseVectorData(trainingBasketsDictFileName,
 
   # Build set of training instances
   numTrainingInstances = length(collect(keys(trainingBasketsDict)))
-  trainingInstances = fill(Array(Int, 1), numTrainingInstances)
+  trainingInstances = fill(Array{Int}(1), numTrainingInstances)
   trainingInstanceIndex = 1
   numItems = 0
   for trainingInstanceBasketId in collect(keys(trainingBasketsDict))
@@ -237,7 +237,7 @@ function doDPPBayesianLearningSparseVectorData(trainingBasketsDictFileName,
 
   # Build set of test instances
   numTestInstances = length(collect(keys(testBasketsDict)))
-  testInstances = fill(Array(Int, 1), numTestInstances)
+  testInstances = fill(Array{Int}(1), numTestInstances)
   testInstanceIndex = 1
   for testInstanceBasketId in collect(keys(testBasketsDict))
     testInstanceItems = deepcopy(testBasketsDict[testInstanceBasketId].basketItems)

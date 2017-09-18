@@ -138,7 +138,7 @@ function computePredictionsSparseVectorData(testBasketsDictFileName,
 
   # Build set of test instances
   numTestInstances = length(collect(keys(testUsersBasketsDict)))
-  testInstances = fill(Array(Int, 1), numTestInstances)
+  testInstances = fill(Array{Int}(1), numTestInstances)
   testInstanceIndex = 1
   numItems = 0
   for testInstanceUserId in collect(keys(testUsersBasketsDict))

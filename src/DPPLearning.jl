@@ -1,4 +1,4 @@
-using HDF5, JLD
+using HDF5, JLD, DataStructures
 
 export computeLogLikelihood, computeGradient, doStochasticGradientAscent,
        doDPPLearningSparseVectorData, isConvergedLogLikelihood
@@ -78,9 +78,9 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
   # itemTraitMatrixInstance, lMatrixTrainingInstanceInverse, and
   # numTrainingInstanceItems for each training instance
   numTrainingInstances = Int(numTrainingInstances)
-  itemTraitMatrixTrainingInstanceVec = Array(Matrix{Float64}, numTrainingInstances)
-  lMatrixTrainingInstanceInverseVec = Array(Matrix{Float64}, numTrainingInstances)
-  numTrainingInstanceItemsVec = Array(Int, numTrainingInstances)
+  itemTraitMatrixTrainingInstanceVec = Array{Matrix{Float64}}(numTrainingInstances)
+  lMatrixTrainingInstanceInverseVec = Array{Matrix{Float64}}(numTrainingInstances)
+  numTrainingInstanceItemsVec = Array{Int}(numTrainingInstances)
   trainingInstanceRowIndex = 0
   itemNotPresentInTrainingInstance = false
   paramsMatrixRowIdicesToTrainingInstanceRowIndicesDict =
@@ -106,13 +106,13 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
   identMinusDualMat = eye(size(dualMat, 1)) - dualMat
 
   numRowsIdentMinusDualMat = size(identMinusDualMat, 1)
-  identMinusDualMatRowVecs = Array(Vector{Float64}, numRowsIdentMinusDualMat)
+  identMinusDualMatRowVecs = Array{Vector{Float64}}(numRowsIdentMinusDualMat)
   for i = 1:numRowsIdentMinusDualMat
     identMinusDualMatRowVecs[i] = vec(identMinusDualMat[i, :])
   end
 
   numParamsMatrixCols = size(paramsMatrix, 2)
-  paramsMatrixColVecs = Array(Vector{Float64}, numParamsMatrixCols)
+  paramsMatrixColVecs = Array{Vector{Float64}}(numParamsMatrixCols)
   for i = 1:numParamsMatrixCols
     paramsMatrixColVecs[i] = vec(paramsMatrix[:, i])
   end
@@ -222,7 +222,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
   # assessing convergence
   validationSetSizePercent = 0.01
   numValidationInstances = convert(Int, round(numTrainingInstances * validationSetSizePercent));
-  validationInstances = fill(Array(Int, 1), numValidationInstances)
+  validationInstances = fill(Array{Int}(1), numValidationInstances)
   validationInstances = trainingInstances[1:numValidationInstances]
   trainingInstances = trainingInstances[(numValidationInstances + 1):numTrainingInstances]
   numTrainingInstances = numTrainingInstances - numValidationInstances
@@ -363,7 +363,7 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
 
   # Build set of training instances
   numTrainingInstances = length(collect(keys(trainingUsersBasketsDict)))
-  trainingInstances = fill(Array(Int, 1), numTrainingInstances)
+  trainingInstances = fill(Array{Int}(1), numTrainingInstances)
   trainingInstanceIndex = 1
   numItems = 0
   for trainingInstanceUserId in collect(keys(trainingUsersBasketsDict))
@@ -383,7 +383,7 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
 
   # Build set of test instances
   numTestInstances = length(collect(keys(testUsersBasketsDict)))
-  testInstances = fill(Array(Int, 1), numTestInstances)
+  testInstances = fill(Array{Int}(1), numTestInstances)
   testInstanceIndex = 1
   for testInstanceUserId in collect(keys(testUsersBasketsDict))
     testInstanceItems = deepcopy(testUsersBasketsDict[testInstanceUserId].basketItems)
@@ -399,7 +399,7 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   end
 
   # Compute ordered item counts in training data, by descending popularity
-  orderedItemCounts = Collections.PriorityQueue(Dict{Int, Int}(), Base.Order.Reverse)
+  orderedItemCounts = PriorityQueue(Dict{Int, Int}(), Base.Order.Reverse)
   for i = 1:numTrainingInstances
     trainingInstance = trainingInstances[i]
 
