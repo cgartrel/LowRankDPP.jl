@@ -60,13 +60,15 @@ end
 # paramsMatrix) is computed with respect to that parameter.  We exploit the
 # structure of the matrices and derivatives to speed up the computation of the
 # gradient.
-function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
-                         numItems, numItemTraits, lambdaVec = 0, alpha = 0,
-                         paramsMatrixRowIdicesToTrainingInstanceRowIndices = 0)
+function computeGradient(paramsMatrix::Matrix{Float64}, trainingInstances::Vector{Vector{Int64}},
+                         numTrainingInstances, numItems, numItemTraits,
+                         lambdaVec::Vector{Float64} = zeros(numItems), alpha = 0,
+                         paramsMatrixRowIdicesToTrainingInstanceRowIndices::Matrix{Int64} =
+                         fill(0, numTrainingInstances, numItems))
   sumTraceTrainingInstances = 0.0
   paramsMatrixNumRows = numItems
   paramsMatrixNumCols = numItemTraits
-  paramsMatrixGradient = zeros(numItems, numItemTraits)
+  paramsMatrixGradient = zeros(Float64, numItems, numItemTraits)
   itemTraitMatrixInstance = Matrix{Float64}
   lMatrixTrainingInstance = Matrix{Float64}
   lMatrixTrainingInstanceInverse = Matrix{Float64}
@@ -82,10 +84,9 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
   lMatrixTrainingInstanceInverseVec = Array{Matrix{Float64}}(numTrainingInstances)
   numTrainingInstanceItemsVec = Array{Int}(numTrainingInstances)
   trainingInstanceRowIndex = 0
+  numTrainingInstanceItems = 0
   itemNotPresentInTrainingInstance = false
-  paramsMatrixRowIdicesToTrainingInstanceRowIndicesDict =
-    paramsMatrixRowIdicesToTrainingInstanceRowIndices[1][1]
-  if paramsMatrixRowIdicesToTrainingInstanceRowIndices == 0
+  if paramsMatrixRowIdicesToTrainingInstanceRowIndices == fill(0, numTrainingInstances, numItems)
     paramsMatrixRowIdicesToTrainingInstanceRowIndices =
       buildMapTrainingInstanceRowIndices(trainingInstances, numTrainingInstances, numItems)
   end
@@ -99,23 +100,10 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
   end
 
   # Precompute items used in second term of gradient
-  colSums = sum(paramsMatrix, 1)
   tItemTraitMatTimesItemTraitMat = paramsMatrix' * paramsMatrix
   dualMat = paramsMatrix *
     inv(eye(size(tItemTraitMatTimesItemTraitMat, 1)) + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
   identMinusDualMat = eye(size(dualMat, 1)) - dualMat
-
-  numRowsIdentMinusDualMat = size(identMinusDualMat, 1)
-  identMinusDualMatRowVecs = Array{Vector{Float64}}(numRowsIdentMinusDualMat)
-  for i = 1:numRowsIdentMinusDualMat
-    identMinusDualMatRowVecs[i] = vec(identMinusDualMat[i, :])
-  end
-
-  numParamsMatrixCols = size(paramsMatrix, 2)
-  paramsMatrixColVecs = Array{Vector{Float64}}(numParamsMatrixCols)
-  for i = 1:numParamsMatrixCols
-    paramsMatrixColVecs[i] = vec(paramsMatrix[:, i])
-  end
 
   # Iterate over each element of currParamsMatrix to compute gradient for each element
   for paramsMatrixColIndex = 1:numItemTraits
@@ -148,7 +136,7 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
               itemTraitMatrixInstance[i, paramsMatrixColIndex]
           end
 
-          @inbounds traceFirstTerm = dot(lMatrixTrainingInstanceInverse[trainingInstanceRowIndex, :],
+          @inbounds @views traceFirstTerm = dot(lMatrixTrainingInstanceInverse[trainingInstanceRowIndex, :],
             itemTraitMatrixInstance[:, paramsMatrixColIndex]) + sumTraceFirstTerm
         end
 
@@ -165,7 +153,7 @@ function computeGradient(paramsMatrix, trainingInstances, numTrainingInstances,
           paramsMatrix[i, paramsMatrixColIndex]
       end
 
-      @inbounds traceSecondTerm = dot(identMinusDualMatRowVecs[paramsMatrixRowIndex], paramsMatrixColVecs[paramsMatrixColIndex]) + sumTraceSecondTerm
+      @inbounds @views traceSecondTerm = dot(identMinusDualMat[paramsMatrixRowIndex, :], paramsMatrix[:, paramsMatrixColIndex]) + sumTraceSecondTerm
 
       # Second term of gradient
       secondTerm = numTrainingInstances * traceSecondTerm
