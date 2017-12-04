@@ -3,7 +3,9 @@ using JLD
 export TestResult, BasketSizeResult, conditionDPPOnItemsObservedLowRank,
        computeNextSingletonProbsConditionalKDPPLowRank!,
        computeNextSingletonNormalizedProbsConditionalKDPPLowRank!,
-       computePredictionsSparseVectorData, computePredictionsForMCMCSamples
+       computePredictionsSparseVectorData, computePredictionsForMCMCSamples,
+       conditionDPPOnItemsObservedLowRankDual,
+       computeNextSingletonProbsConditionalKDPPLowRankDual!
 
 type TestResult
   testInstanceId::Int
@@ -61,6 +63,50 @@ function conditionDPPOnItemsObservedLowRank(itemTraitMatrix, itemsObserved)
     itemIdsToLMatrixItemsObservedRowColIndices
 end
 
+# Returns the L Matrix for a DPP conditioned on the event that all of the items
+# (elements) in the set itemsObserved are observed, for the DPP with the
+# specified L matrix.  itemsObserved is an array that contains the item ids
+# (indices) for the observed items.  The conditional DPP L matrix is computed
+# using the dual low-rank representation of the L matrix, which significantly improves
+# runtime performance for large item catalogs.
+function conditionDPPOnItemsObservedLowRankDual(itemTraitMatrix, itemsObserved)
+  numAllItems = size(itemTraitMatrix, 1)
+  allItemsSet = Set(collect(1:numAllItems))
+  itemsObservedSet = Set(itemsObserved)
+  numTraitDimensions = size(itemTraitMatrix, 2)
+  allItemsNotInObserved = collect(setdiff(allItemsSet, itemsObservedSet))
+
+  itemTraitMatrixB = itemTraitMatrix'
+  cMatrix = itemTraitMatrixB * itemTraitMatrixB'
+
+  itemTraitMatrixBAllItemsNotInObserved = itemTraitMatrixB[:, allItemsNotInObserved]
+  itemTraitMatrixBItemsObserved = itemTraitMatrixB[:, itemsObserved]
+
+  # zMatrixConditionedOnItemsObserved is a projection matrix
+  zMatrixConditionedOnItemsObserved = eye(numTraitDimensions) -
+    itemTraitMatrixBItemsObserved * inv(itemTraitMatrixBItemsObserved' * itemTraitMatrixBItemsObserved) *
+    itemTraitMatrixBItemsObserved'
+
+  cMatrixConditionedOnItemsObserved = zMatrixConditionedOnItemsObserved *
+    cMatrix * zMatrixConditionedOnItemsObserved
+
+  # Create a dict mapping original itemsIds in allItemsNotInObserved to row/col
+  # indices in kMatrixConditionedOnItemsObserved
+  itemIdsToKMatrixItemsObservedRowColIndices = Dict{Int, Int}()
+  kMatrixItemsObservedRowIndex = 1
+  for itemId in allItemsNotInObserved
+    itemIdsToKMatrixItemsObservedRowColIndices[itemId] = kMatrixItemsObservedRowIndex
+
+    kMatrixItemsObservedRowIndex += 1
+  end
+
+  itemTraitMatrixBConditionedOnItemsObserved = zMatrixConditionedOnItemsObserved *
+    itemTraitMatrixBAllItemsNotInObserved
+
+  return cMatrixConditionedOnItemsObserved, itemTraitMatrixBConditionedOnItemsObserved,
+    itemIdsToKMatrixItemsObservedRowColIndices
+end
+
 # Returns the unnormalized probabilities for observing each item in nextItems, given
 # the DPP with the specified itemTraitMatrix and a set of observed items.
 # Uses a conditional k-DPP to compute these probabilities.  The
@@ -80,6 +126,40 @@ function computeNextSingletonProbsConditionalKDPPLowRank!(itemTraitMatrix, items
     lMatrixItemsObservedRowColIndex = itemIdsToLMatrixItemsObservedRowColIndices[nextItemId]
     nextItemsProbs[nextItemId] = lMatrixItemsObserved[lMatrixItemsObservedRowColIndex,
                                                       lMatrixItemsObservedRowColIndex]
+  end
+
+  return
+end
+
+# Returns the unnormalized probabilities for observing each item in nextItems, given
+# the DPP with the specified itemTraitMatrix and a set of observed items.
+# Uses a conditional k-DPP to compute these probabilities.  The
+# conditional DPP L matrix is computed using the dual low-rank representation
+# of the L matrix, which significantly improves runtime performance.
+function computeNextSingletonProbsConditionalKDPPLowRankDual!(itemTraitMatrix,
+  itemsObserved, nextItems, numAllItems, nextItemsProbs)
+  cMatrixConditionedOnItemsObserved, itemTraitMatrixBConditionedOnItemsObserved,
+    itemIdsToKMatrixItemsObservedRowColIndices =
+    conditionDPPOnItemsObservedLowRankDual(itemTraitMatrix, itemsObserved)
+
+  eigenDecomp = eigfact(Symmetric(cMatrixConditionedOnItemsObserved))
+  eigenVals = eigenDecomp[:values]
+  eigenVecs = eigenDecomp[:vectors]
+  rankItemTraitMatrix = size(itemTraitMatrix, 2)
+
+  for nextItemId in nextItems
+    # Compute the probability of observing nextItemId, by computing each diagonal
+    # entry of K (the marginal kernel) conditioned on observing itemsObserved
+    itemsObservedRowColIndex = itemIdsToKMatrixItemsObservedRowColIndices[nextItemId]
+    kMatrixNextItemIdEntry = 0
+    for n = 1:rankItemTraitMatrix
+      kMatrixNextItemIdEntry += (eigenVals[n] / (eigenVals[n] + 1)) *
+        (1 / eigenVals[n]) *
+        (itemTraitMatrixBConditionedOnItemsObserved[:, itemsObservedRowColIndex]' *
+        eigenVecs[:, n]) ^ 2
+
+      nextItemsProbs[nextItemId] = kMatrixNextItemIdEntry
+    end
   end
 
   return
@@ -128,9 +208,13 @@ end
 # Computes DPP single-item basket completion predictions on a dataset in sparse vector format.
 # The learned DPP model parameters (learnedDPPParamsFileName) represents a model
 # learned by stochastic gradient ascent using the DPPLearning module.
+# If useDual is set to true, the dual version of the low-rank DPP kernel is
+# used to compute predictions, which is significantly faster for large item
+# catalogs.
 function computePredictionsSparseVectorData(testBasketsDictFileName,
   testBasketsDictObjectName, learnedDPPParamsFileName,
-  resultsForTestInstancesDictFileName, learnedDPPParamsObjectName = "learnedParamsMatrix")
+  resultsForTestInstancesDictFileName, learnedDPPParamsObjectName = "learnedParamsMatrix",
+  useDual = false)
   srand(1234)
 
   testUsersBasketsDict = load(testBasketsDictFileName, testBasketsDictObjectName)
@@ -184,9 +268,16 @@ function computePredictionsSparseVectorData(testBasketsDictFileName,
     observedItemsInBasketSet = Set(observedItemsInBasket)
     nextItemsForPredictionSet = setdiff(allItemsSet, observedItemsInBasketSet)
 
-    computeNextSingletonProbsConditionalKDPPLowRank!(learnedParamsMatrix, observedItemsInBasket,
-                                                     collect(nextItemsForPredictionSet), numItems,
-                                                     nextItemsProbs)
+    if useDual
+      computeNextSingletonProbsConditionalKDPPLowRankDual!(learnedParamsMatrix,
+        observedItemsInBasket, collect(nextItemsForPredictionSet), numItems,
+        nextItemsProbs)
+    else
+      computeNextSingletonProbsConditionalKDPPLowRank!(learnedParamsMatrix,
+        observedItemsInBasket, collect(nextItemsForPredictionSet), numItems,
+        nextItemsProbs)
+    end
+
 
     testResult = TestResult(i, actualNextItem, 0, deepcopy(nextItemsProbs), observedItemsInBasketSet)
 
