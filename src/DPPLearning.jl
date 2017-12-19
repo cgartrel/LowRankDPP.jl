@@ -180,7 +180,8 @@ end
 
 # Performs stochastic gradient ascent to learn low-rank DPP kernel parameters.
 function doStochasticGradientAscent(trainingInstances, numTrainingInstances, numItems,
-                          numItemTraits, testInstances, numTestInstances, lambdaVec, alpha)
+                          numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
+                          validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0)
   gradient = zeros(numItems, numItemTraits)
   paramsMatrixPrev = zeros(numItems, numItemTraits)
 
@@ -207,13 +208,16 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
   shuffle!(trainingInstances)
 
   # Set aside one percent of trainingInstances for use as a validation set, for
-  # assessing convergence
-  validationSetSizePercent = 0.01
-  numValidationInstances = convert(Int, round(numTrainingInstances * validationSetSizePercent));
-  validationInstances = fill(Array{Int}(1), numValidationInstances)
-  validationInstances = trainingInstances[1:numValidationInstances]
-  trainingInstances = trainingInstances[(numValidationInstances + 1):numTrainingInstances]
-  numTrainingInstances = numTrainingInstances - numValidationInstances
+  # assessing convergence, if a validation set is not explicitly provided
+  avgValidationLogLikelihood = 0
+  if numValidationInstances == 0
+    validationSetSizePercent = 0.01
+    numValidationInstances = convert(Int, round(numTrainingInstances * validationSetSizePercent));
+    validationInstances = fill(Array{Int}(1), numValidationInstances)
+    validationInstances = trainingInstances[1:numValidationInstances]
+    trainingInstances = trainingInstances[(numValidationInstances + 1):numTrainingInstances]
+    numTrainingInstances = numTrainingInstances - numValidationInstances
+  end
 
   # Run stochastic gradient ascent until convergence
   while true
@@ -280,7 +284,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     end
   end
 
-  return paramsMatrix
+  return paramsMatrix, avgValidationLogLikelihood
 end
 
 # Builds a matrix containing a map of paramsMatrixRowIndex to the proper row index in
@@ -417,9 +421,9 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   println("Beginning stochastic gradient ascent...")
 
   # Perform stochastic gradient ascent to learn the DPP kernel parameters (item trait vectors)
-  paramsMatrix = doStochasticGradientAscent(trainingInstances, numTrainingInstances,
-                                            numItems, numItemTraits, testInstances,
-                                            numTestInstances, lambdaVec, alpha)
+  paramsMatrix, avgValidationLogLikelihood =
+    doStochasticGradientAscent(trainingInstances, numTrainingInstances,
+      numItems, numItemTraits, testInstances, numTestInstances, lambdaVec, alpha)
 
   # Compute average log-likelihood on training and test data
   avgTrainingLogLikelihood =
