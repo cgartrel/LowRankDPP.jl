@@ -181,11 +181,12 @@ end
 # Performs stochastic gradient ascent to learn low-rank DPP kernel parameters.
 function doStochasticGradientAscent(trainingInstances, numTrainingInstances, numItems,
                           numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
-                          validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0)
+                          validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0,
+                          initialParamsMatrix = rand(numItems, numItemTraits) + 1)
   gradient = zeros(numItems, numItemTraits)
   paramsMatrixPrev = zeros(numItems, numItemTraits)
 
-  paramsMatrix = rand(numItems, numItemTraits) + 1
+  paramsMatrix = initialParamsMatrix
 
   epsFixed = 0.5e-2
   epsInitialDecay = 1.0e-5 # For Amazon registry apparel dataset
