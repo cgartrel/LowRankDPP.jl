@@ -5,7 +5,8 @@ export computeLogLikelihood, computeGradient, doStochasticGradientAscent,
 
 # Computes the log-likelihood for the low-rank DPP with parameters paramsMatrix
 function computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstances,
-                              numItems, numItemTraits, lambdaVec = 0, alpha = 0)
+                              numItems, numItemTraits, lambdaVec = 0, alpha = 0,
+                              useDual = true)
   itemTraitMatrixInstance = Matrix{Float64}
   lMatrixTrainingInstance = Matrix{Float64}
 
@@ -25,9 +26,15 @@ function computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstan
   # First term of log-likelihood
   firstTerm = sumDetTrainingInstances
 
-  # Compute second term of log-likelihood.  We use the dual representation of a
-  # DPP, to avoid computing the determinant of a potentially large L matrix
-  tItemTraitMatTimesItemTraitMat = paramsMatrix' * paramsMatrix
+  # Compute second term of log-likelihood.  We optionally use the dual
+  # representation of a DPP, to avoid computing the determinant of a potentially
+  # large L matrix
+  tItemTraitMatTimesItemTraitMat = 0
+  if useDual
+    tItemTraitMatTimesItemTraitMat = paramsMatrix' * paramsMatrix
+  else
+    tItemTraitMatTimesItemTraitMat = paramsMatrix * paramsMatrix'
+  end
 
   detParams = logdet(tItemTraitMatTimesItemTraitMat +
                        eye(size(tItemTraitMatTimesItemTraitMat, 1)))
