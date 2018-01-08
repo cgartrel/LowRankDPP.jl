@@ -75,7 +75,7 @@ function computeGradient(paramsMatrix::Matrix{Float64}, trainingInstances::Vecto
                          numTrainingInstances, numItems, numItemTraits,
                          lambdaVec::Vector{Float64} = zeros(numItems), alpha = 0,
                          paramsMatrixRowIdicesToTrainingInstanceRowIndices::Matrix{Int64} =
-                         fill(0, numTrainingInstances, numItems),
+                         fill(0, numTrainingInstances, numItems) ;
                          usePinv = false)
   sumTraceTrainingInstances = 0.0
   paramsMatrixNumRows = numItems
@@ -264,7 +264,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
 
     @time gradient = computeGradient(paramsMatrix + betaMomentum * delta, minibatchTrainingInstances,
                                      numTrainingInstancesInMinibatch, numItems, numItemTraits,
-                                     lambdaVec, alpha, usePinv)
+                                     lambdaVec, alpha)
 
     # Use momentum when computing the update
     delta = betaMomentum * delta + (1.0 - betaMomentum) * eps * gradient
