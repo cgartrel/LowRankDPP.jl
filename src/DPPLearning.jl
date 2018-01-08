@@ -67,11 +67,16 @@ end
 # paramsMatrix) is computed with respect to that parameter.  We exploit the
 # structure of the matrices and derivatives to speed up the computation of the
 # gradient.
+# If usePinv is set to true, we use the pseudo-inverse (pinv()) to  compute the
+# gradient, instead of the inverse (inv()), which may help reduce numerical
+# errors when paramsMatrix is rank deficient.  Note that pinv() is slower
+# than inv() in Julia.
 function computeGradient(paramsMatrix::Matrix{Float64}, trainingInstances::Vector{Vector{Int64}},
                          numTrainingInstances, numItems, numItemTraits,
                          lambdaVec::Vector{Float64} = zeros(numItems), alpha = 0,
                          paramsMatrixRowIdicesToTrainingInstanceRowIndices::Matrix{Int64} =
-                         fill(0, numTrainingInstances, numItems))
+                         fill(0, numTrainingInstances, numItems),
+                         usePinv = false)
   sumTraceTrainingInstances = 0.0
   paramsMatrixNumRows = numItems
   paramsMatrixNumCols = numItemTraits
@@ -102,14 +107,27 @@ function computeGradient(paramsMatrix::Matrix{Float64}, trainingInstances::Vecto
     @inbounds itemTraitMatrixTrainingInstanceVec[trainingInstanceIndex] = itemTraitMatrixInstance
 
     lMatrixTrainingInstance = itemTraitMatrixInstance * itemTraitMatrixInstance'
-    @inbounds lMatrixTrainingInstanceInverseVec[trainingInstanceIndex] = inv(lMatrixTrainingInstance)
+    if usePinv
+      @inbounds lMatrixTrainingInstanceInverseVec[trainingInstanceIndex] = pinv(lMatrixTrainingInstance)
+    else
+      @inbounds lMatrixTrainingInstanceInverseVec[trainingInstanceIndex] = inv(lMatrixTrainingInstance)
+    end
+
     @inbounds numTrainingInstanceItemsVec[trainingInstanceIndex] = size(itemTraitMatrixInstance, 1)
   end
 
   # Precompute items used in second term of gradient
   tItemTraitMatTimesItemTraitMat = paramsMatrix' * paramsMatrix
-  dualMat = paramsMatrix *
-    inv(eye(size(tItemTraitMatTimesItemTraitMat, 1)) + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
+  numRowsTItemTraitMatTimesItemTraitMat = size(tItemTraitMatTimesItemTraitMat, 1)
+  dualMat = zeros(numRowsTItemTraitMatTimesItemTraitMat, numRowsTItemTraitMatTimesItemTraitMat)
+  if usePinv
+    dualMat = paramsMatrix *
+      pinv(eye(size(tItemTraitMatTimesItemTraitMat, 1)) + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
+  else
+    dualMat = paramsMatrix *
+      inv(eye(size(tItemTraitMatTimesItemTraitMat, 1)) + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
+  end
+
   identMinusDualMat = eye(size(dualMat, 1)) - dualMat
 
   # Iterate over each element of currParamsMatrix to compute gradient for each element
@@ -186,10 +204,15 @@ function computeGradient(paramsMatrix::Matrix{Float64}, trainingInstances::Vecto
 end
 
 # Performs stochastic gradient ascent to learn low-rank DPP kernel parameters.
+# If usePinv is set to true, we use the pseudo-inverse (pinv()) to  compute the
+# gradient, instead of the inverse (inv()), which may help reduce numerical
+# errors when paramsMatrix is rank deficient.  Note that pinv() is slower
+# than inv() in Julia.
 function doStochasticGradientAscent(trainingInstances, numTrainingInstances, numItems,
                           numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
                           validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0,
-                          initialParamsMatrix = rand(numItems, numItemTraits) + 1)
+                          initialParamsMatrix = rand(numItems, numItemTraits) + 1,
+                          usePinv = false)
   gradient = zeros(numItems, numItemTraits)
   paramsMatrixPrev = zeros(numItems, numItemTraits)
 
@@ -241,7 +264,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
 
     @time gradient = computeGradient(paramsMatrix + betaMomentum * delta, minibatchTrainingInstances,
                                      numTrainingInstancesInMinibatch, numItems, numItemTraits,
-                                     lambdaVec, alpha)
+                                     lambdaVec, alpha, usePinv)
 
     # Use momentum when computing the update
     delta = betaMomentum * delta + (1.0 - betaMomentum) * eps * gradient
