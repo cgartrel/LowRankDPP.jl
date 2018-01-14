@@ -100,7 +100,7 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
 
   # Create directory for storing collected samples, if it doesn't already exist
   collectedSamplesDir =
-    "$learnedModelOutputDirName/learnedDPPMixtureParams-k$numItemTraits-SGHMC-collectedSamples"
+    "$learnedModelOutputDirName/learnedDPPParams-k$numItemTraits-SGHMC-collectedSamples"
   if !isdir(collectedSamplesDir)
     mkpath(collectedSamplesDir)
   end
@@ -163,11 +163,19 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
     if iterCounter >= numIterationsLargerStepSize && iterCounter < numIterationsIntermediateStepSize
       stepSize = stepSizeIntermediate
       alphaMomentum = alphaMomentumIntermediate
+
+      if alphaMomentum > 0
+        gradientNoiseGaussian = Normal(0, 2 * (alphaMomentum - gradientNoiseEstimate) * stepSize)
+      end
     end
 
     if iterCounter >= numIterationsIntermediateStepSize
       stepSize = stepSizeSmaller
       alphaMomentum = alphaMomentumSmaller
+
+      if alphaMomentum > 0
+        gradientNoiseGaussian = Normal(0, 2 * (alphaMomentum - gradientNoiseEstimate) * stepSize)
+      end
     end
 
     if iterCounter > 2
@@ -180,7 +188,7 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
     # After burn in, collect samples
     if iterCounter > numBurnInSamples
       if iterCounter % sampleLag == 0
-        @async save("$collectedSamplesDir/learnedDPPMixtureParams-k$numItemTraits-SGHMC-sample-$numSamplesCollected.jld",
+        @async save("$collectedSamplesDir/learnedDPPParams-k$numItemTraits-SGHMC-sample-$numSamplesCollected.jld",
           "itemTraitMatrixSample", itemTraitMatrix)
 
         println("Collected $numSamplesCollected samples")
