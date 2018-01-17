@@ -212,7 +212,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
                           numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
                           validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0,
                           initialParamsMatrix = rand(numItems, numItemTraits) + 1,
-                          usePinv = false)
+                          usePinv = false; verbose = false, maxIters = Inf)
   gradient = zeros(numItems, numItemTraits)
   paramsMatrixPrev = zeros(numItems, numItemTraits)
 
@@ -250,8 +250,11 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     numTrainingInstances = numTrainingInstances - numValidationInstances
   end
 
-  # Run stochastic gradient ascent until convergence
-  while true
+  tic()
+
+  # Run stochastic gradient ascent until convergence, or until maxIters
+  # iterations have been completed
+  while numIterationsCompleted < maxIters
     # Get current minibatch
     numTrainingInstancesInMinibatch = minibatchSize
     if currTrainingInstanceIndex + minibatchSize > numTrainingInstances
@@ -279,14 +282,19 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     @time avgTestLogLikelihood =
       computeLogLikelihood(paramsMatrix, testInstances, numTestInstances,
                            numItems, numItemTraits) / numTestInstances
-    println("avgTrainingLogLikelihood: $avgTrainingLogLikelihood")
-    println("avgValidationLogLikelihood: $avgValidationLogLikelihood")
-    println("avgTestLogLikelihood: $avgTestLogLikelihood")
+    if verbose
+      println("avgTrainingLogLikelihood: $avgTrainingLogLikelihood")
+      println("avgValidationLogLikelihood: $avgValidationLogLikelihood")
+      println("avgTestLogLikelihood: $avgTestLogLikelihood")
+    end
 
     numIterationsCompleted += 1
-    if numIterationsCompleted % 1 == 0
-      println("alpha: $alpha")
-      println("Completed $numIterationsCompleted stochastic gradient ascent iterations")
+
+    if verbose
+      if numIterationsCompleted % 1 == 0
+        println("alpha: $alpha")
+        println("Completed $numIterationsCompleted stochastic gradient ascent iterations")
+      end
     end
 
     if numIterationsCompleted % 100 == 0
@@ -303,7 +311,10 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     if numIterationsCompleted >= numIterationsFixedEps
       betaMomentum = 0.0
       eps = epsInitialDecay / (1 + numIterationsCompleted / numIterationsFixedEps)
-      println("Reduced eps: $eps")
+
+      if verbose
+        println("Reduced eps: $eps")
+      end
     end
 
     currTrainingInstanceIndex += numTrainingInstancesInMinibatch + 1
@@ -315,7 +326,9 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     end
   end
 
-  return paramsMatrix, avgValidationLogLikelihood
+  endTime = toq()
+
+  return paramsMatrix, avgValidationLogLikelihood, endTime
 end
 
 # Builds a matrix containing a map of paramsMatrixRowIndex to the proper row index in
@@ -452,9 +465,10 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   println("Beginning stochastic gradient ascent...")
 
   # Perform stochastic gradient ascent to learn the DPP kernel parameters (item trait vectors)
-  paramsMatrix, avgValidationLogLikelihood =
+  paramsMatrix, avgValidationLogLikelihood, runTime =
     doStochasticGradientAscent(trainingInstances, numTrainingInstances,
-      numItems, numItemTraits, testInstances, numTestInstances, lambdaVec, alpha)
+      numItems, numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
+      verbose = true)
 
   # Compute average log-likelihood on training and test data
   avgTrainingLogLikelihood =
