@@ -136,8 +136,11 @@ end
 # Uses a conditional k-DPP to compute these probabilities.  The
 # conditional DPP L matrix is computed using the dual low-rank representation
 # of the L matrix, which significantly improves runtime performance.
-function computeNextSingletonProbsConditionalKDPPLowRankDual!(itemTraitMatrix,
-  itemsObserved, nextItems, numAllItems, nextItemsProbs)
+function computeNextSingletonProbsConditionalKDPPLowRankDual!(
+  itemTraitMatrix::Matrix{Float64}, itemsObserved::Vector{Int64},
+  nextItems::Vector{Int64}, numAllItems, nextItemsProbs::Dict{Int64,Float64})
+  println("Calling conditionDPPOnItemsObservedLowRankDual...")
+
   cMatrixConditionedOnItemsObserved, itemTraitMatrixBConditionedOnItemsObserved,
     itemIdsToKMatrixItemsObservedRowColIndices =
     conditionDPPOnItemsObservedLowRankDual(itemTraitMatrix, itemsObserved)
@@ -147,16 +150,23 @@ function computeNextSingletonProbsConditionalKDPPLowRankDual!(itemTraitMatrix,
   eigenVecs = eigenDecomp[:vectors]
   rankItemTraitMatrix = size(itemTraitMatrix, 2)
 
+  # Precompute terms used in computing probability of observing nextItemIds below
+  coefficient = Vector{Float64}(rankItemTraitMatrix)
+  for n = 1:rankItemTraitMatrix
+    coefficient[n] = (eigenVals[n] / (eigenVals[n] + 1)) * (1 / eigenVals[n])
+  end
+
+  itemsObservedRowColIndex = 0
+  kMatrixNextItemIdEntry = 0
   for nextItemId in nextItems
     # Compute the probability of observing nextItemId, by computing each diagonal
     # entry of K (the marginal kernel) conditioned on observing itemsObserved
     itemsObservedRowColIndex = itemIdsToKMatrixItemsObservedRowColIndices[nextItemId]
     kMatrixNextItemIdEntry = 0
     for n = 1:rankItemTraitMatrix
-      kMatrixNextItemIdEntry += (eigenVals[n] / (eigenVals[n] + 1)) *
-        (1 / eigenVals[n]) *
-        (itemTraitMatrixBConditionedOnItemsObserved[:, itemsObservedRowColIndex]' *
-        eigenVecs[:, n]) ^ 2
+      @inbounds kMatrixNextItemIdEntry += coefficient[n] *
+        (itemTraitMatrixBConditionedOnItemsObserved[:, itemsObservedRowColIndex]'
+          * eigenVecs[:, n]) ^ 2
 
       nextItemsProbs[nextItemId] = kMatrixNextItemIdEntry
     end
