@@ -212,7 +212,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
                           numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
                           validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0,
                           initialParamsMatrix = rand(numItems, numItemTraits) + 1,
-                          usePinv = false; verbose = false, maxIters = Inf)
+                          usePinv = false; verbose = true, maxIters = Inf)
   gradient = zeros(numItems, numItemTraits)
   paramsMatrixPrev = zeros(numItems, numItemTraits)
 
@@ -265,24 +265,31 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
 
     paramsMatrixPrev = paramsMatrix
 
-    @time gradient = computeGradient(paramsMatrix + betaMomentum * delta, minibatchTrainingInstances,
-                                     numTrainingInstancesInMinibatch, numItems, numItemTraits,
-                                     lambdaVec, alpha)
+    if verbose
+      @time gradient = computeGradient(paramsMatrix + betaMomentum * delta,
+        minibatchTrainingInstances, numTrainingInstancesInMinibatch, numItems,
+        numItemTraits, lambdaVec, alpha)
+    else
+      gradient = computeGradient(paramsMatrix + betaMomentum * delta,
+        minibatchTrainingInstances, numTrainingInstancesInMinibatch, numItems,
+        numItemTraits, lambdaVec, alpha)
+    end
+
 
     # Use momentum when computing the update
     delta = betaMomentum * delta + (1.0 - betaMomentum) * eps * gradient
     paramsMatrix = paramsMatrix + delta
 
-    @time avgTrainingLogLikelihood =
-      computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstances,
-                           numItems, numItemTraits) / numTrainingInstances
-   @time avgValidationLogLikelihood =
-     computeLogLikelihood(paramsMatrix, validationInstances, numValidationInstances,
-                          numItems, numItemTraits) / numValidationInstances
-    @time avgTestLogLikelihood =
-      computeLogLikelihood(paramsMatrix, testInstances, numTestInstances,
-                           numItems, numItemTraits) / numTestInstances
     if verbose
+      @time avgTrainingLogLikelihood = computeLogLikelihood(paramsMatrix,
+        trainingInstances, numTrainingInstances,
+        numItems, numItemTraits) / numTrainingInstances
+      @time avgValidationLogLikelihood = computeLogLikelihood(paramsMatrix,
+        validationInstances, numValidationInstances, numItems,
+        numItemTraits) / numValidationInstances
+      @time avgTestLogLikelihood = computeLogLikelihood(paramsMatrix,
+        testInstances, numTestInstances, numItems, numItemTraits) / numTestInstances
+
       println("avgTrainingLogLikelihood: $avgTrainingLogLikelihood")
       println("avgValidationLogLikelihood: $avgValidationLogLikelihood")
       println("avgTestLogLikelihood: $avgTestLogLikelihood")
@@ -303,7 +310,8 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     end
 
     if isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev,
-      validationInstances, numValidationInstances, numItems, 1.0e-5, "validation")
+      validationInstances, numValidationInstances, numItems, 1.0e-5, "validation",
+      verbose = verbose)
       break
     end
 
@@ -354,7 +362,8 @@ end
 # Determine if we have reached convergence, based on the log likelihood
 # of the V (parameter) matrix.
 function isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev, instances,
-                                  numInstances, numItems, eps, instanceTypeName)
+                                  numInstances, numItems, eps, instanceTypeName;
+                                  verbose = true)
   logLikelihoodParamsMatrix = computeLogLikelihood(paramsMatrix, instances,
                                                    numInstances, numItems, 0)
   logLikelihoodParamsMatrixPrev = computeLogLikelihood(paramsMatrixPrev, instances,
@@ -365,10 +374,16 @@ function isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev, instances,
   if logLikelihoodParamsMatrix < logLikelihoodParamsMatrixPrev
     relativeChangeSign = "-"
   end
-  println("\t relativeChange in $instanceTypeName log likelihood: $relativeChangeSign$relativeChange")
+
+  if verbose
+    println("\t relativeChange in $instanceTypeName log likelihood: $relativeChangeSign$relativeChange")
+  end
 
   if relativeChange <= eps
-    println("relativeChange in $instanceTypeName log likelihood: $relativeChangeSign$relativeChange, converged")
+    if verbose
+      println("relativeChange in $instanceTypeName log likelihood: $relativeChangeSign$relativeChange, converged")
+    end
+
     return true
   else
     return false
