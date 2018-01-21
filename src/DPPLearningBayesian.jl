@@ -105,6 +105,9 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
     mkpath(collectedSamplesDir)
   end
 
+  trainingLogLike = computeLogLikelihood(itemTraitMatrix,
+    trainingInstances, numTrainingInstances, numItems, 0)
+
   currTrainingInstanceIndex = 1
   shuffle!(trainingInstances)
   for iterCounter = 1:maxNumIterations
@@ -179,10 +182,14 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
     end
 
     if iterCounter > 2
+      prevTrainingLogLike = trainingLogLike
+      trainingLogLike = computeLogLikelihood(itemTraitMatrix,
+        trainingInstances, numTrainingInstances, numItems, 0)
+
       # Tracking training log likelihood is not a "true" measure of convergence
       # here, but provides a useful heuristic
-      isConvergedLogLikelihood(itemTraitMatrix, itemTraitMatrixPrev,
-        trainingInstances, numTrainingInstances, numItems, 1.0e-7, "training")
+      isConvergedLogLikelihood(prevTrainingLogLike, trainingLogLike,
+        1.0e-7, "training", verbose = true)
     end
 
     # After burn in, collect samples

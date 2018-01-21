@@ -252,6 +252,9 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
 
   tic()
 
+  validationLogLike = computeLogLikelihood(paramsMatrix, validationInstances,
+    numValidationInstances, numItems, 0)
+
   # Run stochastic gradient ascent until convergence, or until maxIters
   # iterations have been completed
   while numIterationsCompleted < maxIters
@@ -309,9 +312,12 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
       # save("learnedDPPParamsMatrix-k$numItemTraits-lambdaPop$alpha-$numIterationsCompleted.jld", "learnedParamsMatrix", paramsMatrix)
     end
 
-    if isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev,
-      validationInstances, numValidationInstances, numItems, 1.0e-5, "validation",
-      verbose = verbose)
+
+    prevValidationLogLike = validationLogLike
+    validationLogLike = computeLogLikelihood(paramsMatrix, validationInstances,
+      numValidationInstances, numItems, 0)
+    if isConvergedLogLikelihood(prevValidationLogLike, validationLogLike,
+      1.0e-5, "validation", verbose = verbose)
       break
     end
 
@@ -361,17 +367,12 @@ end
 
 # Determine if we have reached convergence, based on the log likelihood
 # of the V (parameter) matrix.
-function isConvergedLogLikelihood(paramsMatrix, paramsMatrixPrev, instances,
-                                  numInstances, numItems, eps, instanceTypeName;
+function isConvergedLogLikelihood(prevLogLike, newLogLike, eps, instanceTypeName;
                                   verbose = true)
-  logLikelihoodParamsMatrix = computeLogLikelihood(paramsMatrix, instances,
-                                                   numInstances, numItems, 0)
-  logLikelihoodParamsMatrixPrev = computeLogLikelihood(paramsMatrixPrev, instances,
-                                                       numInstances, numItems, 0)
   # eps = 1.0e-7
-  relativeChange = abs(logLikelihoodParamsMatrix - logLikelihoodParamsMatrixPrev) / abs(logLikelihoodParamsMatrix)
+  relativeChange = abs(newLogLike - prevLogLike) / abs(prevLogLike)
   relativeChangeSign = ""
-  if logLikelihoodParamsMatrix < logLikelihoodParamsMatrixPrev
+  if newLogLike < prevLogLike
     relativeChangeSign = "-"
   end
 
