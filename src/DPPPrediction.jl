@@ -139,7 +139,6 @@ end
 function computeNextSingletonProbsConditionalKDPPLowRankDual!(
   itemTraitMatrix::Matrix{Float64}, itemsObserved::Vector{Int64},
   nextItems::Vector{Int64}, numAllItems, nextItemsProbs::Dict{Int64,Float64})
-  println("Calling conditionDPPOnItemsObservedLowRankDual...")
 
   cMatrixConditionedOnItemsObserved, itemTraitMatrixBConditionedOnItemsObserved,
     itemIdsToKMatrixItemsObservedRowColIndices =
