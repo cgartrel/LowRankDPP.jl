@@ -212,7 +212,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
                           numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
                           validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0,
                           initialParamsMatrix = rand(numItems, numItemTraits) + 1,
-                          usePinv = false; verbose = true, maxIters = Inf)
+                          usePinv = false; verbose = true, maxIters = Inf, minibatchSize = 1000)
   gradient = zeros(numItems, numItemTraits)
   paramsMatrixPrev = zeros(numItems, numItemTraits)
 
@@ -232,7 +232,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
   delta = zeros(numItems, numItemTraits)
 
   # Number of training instances to process per minibatch
-  minibatchSize = 1000
+  # minibatchSize = 1000
 
   currTrainingInstanceIndex = 1
 
