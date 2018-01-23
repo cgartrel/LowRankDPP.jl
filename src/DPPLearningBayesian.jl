@@ -38,7 +38,7 @@ end
 # Runs Stochastic Gradient Hamiltonian Monte Carlo (SGHMC) to generate samples from the posterior
 function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
   numTrainingInstances, numItems, numItemTraits, testInstances, numTestInstances,
-  learnedModelOutputDirName, initialItemTraitMatrix = -1)
+  learnedModelOutputDirName, initialItemTraitMatrix = -1; minibatchSize = 1000)
 
   # Initialize itemTraitMatrix (V matrix)
   itemTraitMatrix = rand(numItems, numItemTraits)
@@ -84,7 +84,7 @@ function runStochasticGradientHamiltonianMonteCarloSampler(trainingInstances,
   numLeapfrogSteps = 10
 
   # Number of training instances to process per minibatch
-  minibatchSize = 1000
+  # minibatchSize = 1000
 
   delta = zeros(numItems, numItemTraits)
 
