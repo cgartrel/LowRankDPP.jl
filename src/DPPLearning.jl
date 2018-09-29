@@ -36,11 +36,16 @@ function computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstan
     tItemTraitMatTimesItemTraitMat = paramsMatrix * paramsMatrix'
   end
 
-  detParams = logdet(tItemTraitMatTimesItemTraitMat +
-                       eye(size(tItemTraitMatTimesItemTraitMat, 1)))
+  detParams = det(tItemTraitMatTimesItemTraitMat +
+    eye(size(tItemTraitMatTimesItemTraitMat, 1)))
+  if detParams < 0
+    # Fix for possible numerical stability issues
+    detParams = abs(detParams)
+  end
+  logDetParams = log(detParams)
 
   # Second term of log-likelihood
-  secondTerm = numTrainingInstances * detParams
+  secondTerm = numTrainingInstances * logDetParams
 
   # Third term of log-likelihood, which is the regularization term
   thirdTerm = 0.0
