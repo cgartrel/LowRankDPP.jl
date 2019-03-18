@@ -16,7 +16,7 @@ Processes](http://ulrichpaquet.com/Papers/RecSys-2016-DPP.pdf) paper ([slides](h
 ## Installation
 Within Julia, use the package manager:
 ```Julia
-Pkg.clone("git://github.com/cgartrel/LowRankDPP.jl.git")
+Pkg.add(PackageSpec(url="git://github.com/cgartrel/LowRankDPP.jl.git"))
 ```
 ## Data Files
 The Amazon baby registry dataset is included in the `data/` directory.  This
