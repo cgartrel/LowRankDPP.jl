@@ -1,4 +1,4 @@
-using HDF5, JLD, DataStructures
+using Serialization, DataStructures, Random, LinearAlgebra
 
 export computeLogLikelihood, computeGradient, doStochasticGradientAscent,
        doDPPLearningSparseVectorData, isConvergedLogLikelihood
@@ -11,7 +11,8 @@ function computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstan
   lMatrixTrainingInstance = Matrix{Float64}
 
   # Compute first term of log-likelihood
-  sumDetTrainingInstances = @sync @parallel (+) for i = 1:numTrainingInstances
+  sumDetTrainingInstances = 0.0
+  for i = 1:numTrainingInstances
     @inbounds itemTraitMatrixInstance = paramsMatrix[trainingInstances[i], :]
     lMatrixTrainingInstance = itemTraitMatrixInstance * itemTraitMatrixInstance'
 
@@ -21,7 +22,7 @@ function computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstan
       result = log(detLMatrixTrainingInstance)
     end
 
-    result
+    sumDetTrainingInstances += result
   end
   # First term of log-likelihood
   firstTerm = sumDetTrainingInstances
@@ -36,8 +37,7 @@ function computeLogLikelihood(paramsMatrix, trainingInstances, numTrainingInstan
     tItemTraitMatTimesItemTraitMat = paramsMatrix * paramsMatrix'
   end
 
-  detParams = det(tItemTraitMatTimesItemTraitMat +
-    eye(size(tItemTraitMatTimesItemTraitMat, 1)))
+  detParams = det(tItemTraitMatTimesItemTraitMat + I)
   if detParams < 0
     # Fix for possible numerical stability issues
     detParams = abs(detParams)
@@ -97,9 +97,9 @@ function computeGradient(paramsMatrix::Matrix{Float64}, trainingInstances::Vecto
   # itemTraitMatrixInstance, lMatrixTrainingInstanceInverse, and
   # numTrainingInstanceItems for each training instance
   numTrainingInstances = Int(numTrainingInstances)
-  itemTraitMatrixTrainingInstanceVec = Array{Matrix{Float64}}(numTrainingInstances)
-  lMatrixTrainingInstanceInverseVec = Array{Matrix{Float64}}(numTrainingInstances)
-  numTrainingInstanceItemsVec = Array{Int}(numTrainingInstances)
+  itemTraitMatrixTrainingInstanceVec = Array{Matrix{Float64}}(undef, numTrainingInstances)
+  lMatrixTrainingInstanceInverseVec = Array{Matrix{Float64}}(undef, numTrainingInstances)
+  numTrainingInstanceItemsVec = Array{Int}(undef, numTrainingInstances)
   trainingInstanceRowIndex = 0
   numTrainingInstanceItems = 0
   itemNotPresentInTrainingInstance = false
@@ -127,13 +127,13 @@ function computeGradient(paramsMatrix::Matrix{Float64}, trainingInstances::Vecto
   dualMat = zeros(numRowsTItemTraitMatTimesItemTraitMat, numRowsTItemTraitMatTimesItemTraitMat)
   if usePinv
     dualMat = paramsMatrix *
-      pinv(eye(size(tItemTraitMatTimesItemTraitMat, 1)) + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
+      pinv(I + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
   else
     dualMat = paramsMatrix *
-      inv(eye(size(tItemTraitMatTimesItemTraitMat, 1)) + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
+      inv(I + tItemTraitMatTimesItemTraitMat) * paramsMatrix'
   end
 
-  identMinusDualMat = eye(size(dualMat, 1)) - dualMat
+  identMinusDualMat = I - dualMat
 
   # Iterate over each element of currParamsMatrix to compute gradient for each element
   for paramsMatrixColIndex = 1:numItemTraits
@@ -215,8 +215,8 @@ end
 # than inv() in Julia.
 function doStochasticGradientAscent(trainingInstances, numTrainingInstances, numItems,
                           numItemTraits, testInstances, numTestInstances, lambdaVec, alpha,
-                          validationInstances = fill(Array{Int}(1), 0), numValidationInstances = 0,
-                          initialParamsMatrix = rand(numItems, numItemTraits) + 1,
+                          validationInstances = fill(Vector{Int}(), 0), numValidationInstances = 0,
+                          initialParamsMatrix = rand(numItems, numItemTraits) + ones(numItems, numItemTraits),
                           usePinv = false; verbose = true, maxIters = Inf, minibatchSize = 1000)
   gradient = zeros(numItems, numItemTraits)
   paramsMatrixPrev = zeros(numItems, numItemTraits)
@@ -249,13 +249,13 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
   if numValidationInstances == 0
     validationSetSizePercent = 0.01
     numValidationInstances = convert(Int, round(numTrainingInstances * validationSetSizePercent));
-    validationInstances = fill(Array{Int}(1), numValidationInstances)
+    validationInstances = fill(Vector{Int}(), numValidationInstances)
     validationInstances = trainingInstances[1:numValidationInstances]
     trainingInstances = trainingInstances[(numValidationInstances + 1):numTrainingInstances]
     numTrainingInstances = numTrainingInstances - numValidationInstances
   end
 
-  tic()
+  startTime = time()
 
   validationLogLike = computeLogLikelihood(paramsMatrix, validationInstances,
     numValidationInstances, numItems, 0)
@@ -345,7 +345,7 @@ function doStochasticGradientAscent(trainingInstances, numTrainingInstances, num
     end
   end
 
-  endTime = toq()
+  endTime = time() - startTime
 
   return paramsMatrix, avgValidationLogLikelihood, endTime
 end
@@ -404,23 +404,21 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
                                        alpha)
   println("Starting doDPPLearningSparseVectorData()")
 
-  srand(1234)
+  Random.seed!(1234)
 
   # cd("$(homedir())\\Belgian-retail-supermarket")
 
   # Load training data
-  trainingUsersBasketsDict = load(trainingBasketsDictFileName,
-                                  trainingBasketsDictObjectName)
+  trainingUsersBasketsDict = open(deserialize, trainingBasketsDictFileName);
   println("Loaded $trainingBasketsDictFileName")
 
   # Load test data
-  testUsersBasketsDict = load(testBasketsDictFileName,
-                              testBasketsDictObjectName)
+  testUsersBasketsDict = open(deserialize, testBasketsDictFileName);
   println("Loaded $testBasketsDictFileName")
 
   # Build set of training instances
   numTrainingInstances = length(collect(keys(trainingUsersBasketsDict)))
-  trainingInstances = fill(Array{Int}(1), numTrainingInstances)
+  trainingInstances = fill(Vector{Int}(), numTrainingInstances)
   trainingInstanceIndex = 1
   numItems = 0
   for trainingInstanceUserId in collect(keys(trainingUsersBasketsDict))
@@ -440,7 +438,7 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
 
   # Build set of test instances
   numTestInstances = length(collect(keys(testUsersBasketsDict)))
-  testInstances = fill(Array{Int}(1), numTestInstances)
+  testInstances = fill(Vector{Int}(), numTestInstances)
   testInstanceIndex = 1
   for testInstanceUserId in collect(keys(testUsersBasketsDict))
     testInstanceItems = deepcopy(testUsersBasketsDict[testInstanceUserId].basketItems)
@@ -510,6 +508,6 @@ function doDPPLearningSparseVectorData(trainingBasketsDictFileName, trainingBask
   if !isdir(learnedModelOutputDirName)
     mkdir(learnedModelOutputDirName)
   end
-  save("$learnedModelOutputDirName/learnedDPPParamsMatrix-k$numItemTraits-lambdaPop$alpha.jld",
-    "learnedParamsMatrix", paramsMatrix)
+  open(f -> serialize(f, paramsMatrix),
+    "$learnedModelOutputDirName/learnedDPPParamsMatrix-k$numItemTraits-lambdaPop$alpha.jls", "w");
 end

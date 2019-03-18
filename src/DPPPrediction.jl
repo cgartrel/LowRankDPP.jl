@@ -1,4 +1,4 @@
-using JLD
+using Serialization, Random, LinearAlgebra
 
 export TestResult, BasketSizeResult, conditionDPPOnItemsObservedLowRank,
        computeNextSingletonProbsConditionalKDPPLowRank!,
@@ -7,19 +7,19 @@ export TestResult, BasketSizeResult, conditionDPPOnItemsObservedLowRank,
        conditionDPPOnItemsObservedLowRankDual,
        computeNextSingletonProbsConditionalKDPPLowRankDual!
 
-type TestResult
+mutable struct TestResult
   testInstanceId::Int
   actualNextItemId::Int
   predictedRankActualNextItem::Int
-  nextItemsProbs::Collections.Dict{Int, Float64}
+  nextItemsProbs::Dict{Int, Float64}
   itemsInBasket::Set{Int}
 end
 
-type BasketSizeResult
+mutable struct BasketSizeResult
   basketSize::Int
   numBasketInstances::Int
   sumPredictedRanks::Int
-  predictedRanks::Array{Int, 1}
+  predictedRanks::Vector{Int}
 end
 
 # Returns the L Matrix for a DPP conditioned on the event that all of the items
@@ -39,7 +39,7 @@ function conditionDPPOnItemsObservedLowRank(itemTraitMatrix, itemsObserved)
   itemTraitMatrixItemsObserved = itemTraitMatrix[itemsObserved, :]
 
   # zMatrixConditionedOnItemsObserved is a projection matrix
-  zMatrixConditionedOnItemsObserved = eye(numTraitDimensions) -
+  zMatrixConditionedOnItemsObserved = I -
     itemTraitMatrixItemsObserved' * inv(itemTraitMatrixItemsObserved * itemTraitMatrixItemsObserved') *
     itemTraitMatrixItemsObserved
 
@@ -83,7 +83,7 @@ function conditionDPPOnItemsObservedLowRankDual(itemTraitMatrix, itemsObserved)
   itemTraitMatrixBItemsObserved = itemTraitMatrixB[:, itemsObserved]
 
   # zMatrixConditionedOnItemsObserved is a projection matrix
-  zMatrixConditionedOnItemsObserved = eye(numTraitDimensions) -
+  zMatrixConditionedOnItemsObserved = I -
     itemTraitMatrixBItemsObserved * inv(itemTraitMatrixBItemsObserved' * itemTraitMatrixBItemsObserved) *
     itemTraitMatrixBItemsObserved'
 
@@ -224,14 +224,14 @@ function computePredictionsSparseVectorData(testBasketsDictFileName,
   testBasketsDictObjectName, learnedDPPParamsFileName,
   resultsForTestInstancesDictFileName, learnedDPPParamsObjectName = "learnedParamsMatrix",
   useDual = false)
-  srand(1234)
+  Random.seed!(1234)
 
-  testUsersBasketsDict = load(testBasketsDictFileName, testBasketsDictObjectName)
+  testUsersBasketsDict = open(deserialize, testBasketsDictFileName);
   println("Loaded $testBasketsDictFileName")
 
   # Build set of test instances
   numTestInstances = length(collect(keys(testUsersBasketsDict)))
-  testInstances = fill(Array{Int}(1), numTestInstances)
+  testInstances = fill(Vector{Int}(), numTestInstances)
   testInstanceIndex = 1
   numItems = 0
   for testInstanceUserId in collect(keys(testUsersBasketsDict))
@@ -251,17 +251,17 @@ function computePredictionsSparseVectorData(testBasketsDictFileName,
   println("Number of distinct test instances: $numDistinctTestInstances")
 
   # Load serialized trained DPP model from disk
-  learnedParamsMatrix = load(learnedDPPParamsFileName, learnedDPPParamsObjectName)
+  learnedParamsMatrix = open(deserialize, learnedDPPParamsFileName);
   println("Loaded $learnedDPPParamsFileName")
 
   allItemsSet = Set(1:numItems)
 
   nextItemsProbs = Dict{Int, Float64}()
-  resultsForTestInstancesDict = Dict{Array{Int, 1}, TestResult}()
+  resultsForTestInstancesDict = Dict{Vector{Int}, TestResult}()
 
   println("Processing testInstances 1 to $(length(testInstances))")
   # Compute next-item predictions for each test instance (basket)
-  tic()
+  startTime = time()
   for i = 1:length(testInstances)
     testInstance = testInstances[i]
 
@@ -291,7 +291,7 @@ function computePredictionsSparseVectorData(testBasketsDictFileName,
     testResult = TestResult(i, actualNextItem, 0, deepcopy(nextItemsProbs), observedItemsInBasketSet)
 
     # Compute rank of actual next item in the sorted list of next-item predictions
-    rankActualNextItem = length(find(x -> x > nextItemsProbs[actualNextItem], collect(values(nextItemsProbs))))
+    rankActualNextItem = length(findall(x -> x > nextItemsProbs[actualNextItem], collect(values(nextItemsProbs))))
     empty!(nextItemsProbs)
 
     testResult.predictedRankActualNextItem = rankActualNextItem
@@ -302,14 +302,14 @@ function computePredictionsSparseVectorData(testBasketsDictFileName,
       println("Processed $i test instances")
     end
   end
-  elapsedPredictionTime = toc()
+  elapsedPredictionTime = time() - startTime
 
   averagePredictionTimePerTestInstance = elapsedPredictionTime / numDistinctTestInstances
   println("averagePredictionTimePerTestInstance = $averagePredictionTimePerTestInstance")
 
   # Save resultsForTestInstancesDict
-  save(resultsForTestInstancesDictFileName, "resultsForTestInstancesDict",
-    resultsForTestInstancesDict)
+  open(f -> serialize(f, resultsForTestInstancesDict),
+    "$resultsForTestInstancesDictFileName", "w");
   println("Saved $resultsForTestInstancesDictFileName")
 
   return resultsForTestInstancesDict

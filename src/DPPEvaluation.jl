@@ -1,4 +1,4 @@
-using JLD, DataStructures
+using Serialization, DataStructures, Random
 
 export computePredictionMetricsSparseVectorData
 
@@ -7,13 +7,12 @@ function getOrderedItemCountsSparseVectorData(trainingBasketsDictFileName,
                                               trainingBasketsDictObjectName)
 
   # Load training data
-  trainingUsersBasketsDict = load(trainingBasketsDictFileName,
-                                  trainingBasketsDictObjectName)
+  trainingUsersBasketsDict = open(deserialize, trainingBasketsDictFileName);
   println("Loaded $trainingBasketsDictFileName")
 
   # Build set of training instances
   numTrainingInstances = length(collect(keys(trainingUsersBasketsDict)))
-  trainingInstances = fill(Array{Int}(1), numTrainingInstances)
+  trainingInstances = fill(Vector{Int}(), numTrainingInstances)
   trainingInstanceIndex = 1
   numItems = 0
   for trainingInstanceUserId in collect(keys(trainingUsersBasketsDict))
@@ -51,15 +50,15 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
                                                   testBasketsDictFileName, testBasketsDictObjectName,
                                                   resultsForTestInstancesDictFileName)
   resultsForTestInstancesDictObjectName = "resultsForTestInstancesDict"
-  srand(1234)
+  Random.seed!(1234)
 
   # Load test data
-  testUsersBasketsDict = load(testBasketsDictFileName, testBasketsDictObjectName)
+  testUsersBasketsDict = open(deserialize, testBasketsDictFileName);
   println("Loaded $testBasketsDictFileName")
 
   # Build set of test instances
   numTestInstances = length(collect(keys(testUsersBasketsDict)))
-  testInstances = fill(Array{Int}(1), numTestInstances)
+  testInstances = fill(Vector{Int}(), numTestInstances)
   testInstanceIndex = 1
   numItems = 0
   for testInstanceUserId in collect(keys(testUsersBasketsDict))
@@ -98,8 +97,7 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
   end
 
   # Load DPP prediction results from disk
-  resultsForTestInstancesDict = load(resultsForTestInstancesDictFileName,
-                                     resultsForTestInstancesDictObjectName)
+  resultsForTestInstancesDict = open(deserialize, resultsForTestInstancesDictFileName);
   println("Loaded $resultsForTestInstancesDictFileName")
 
   # Compute mean percentile rank and precision across predictions for all test instances
@@ -155,7 +153,7 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
   end
 
   # Compute overall precision@1 (accuracy)
-  hits = length(find(x -> x < 1, predictedRanks))
+  hits = length(findall(x -> x < 1, predictedRanks))
   precisionAtOnePercent = hits / numTestInstances * 100
   println("")
   println("precision@1 for all baskets: $precisionAtOnePercent")
@@ -170,13 +168,13 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
   # Compute precision@1 (accuracy) for each basket size
   for basketSize in sort(collect(keys(basketSizeResultsDict)))
     basketSizeResult = basketSizeResultsDict[basketSize]
-    hits = length(find(x -> x < 1, basketSizeResult.predictedRanks))
+    hits = length(findall(x -> x < 1, basketSizeResult.predictedRanks))
     precisionAtOnePercent = hits / basketSizeResult.numBasketInstances * 100
     println("For basket size $basketSize, precision@1: $precisionAtOnePercent")
   end
 
   # Compute overall precision@5
-  hits = length(find(x -> x < 5, predictedRanks))
+  hits = length(findall(x -> x < 5, predictedRanks))
   precisionAtFivePercent = hits / numTestInstances * 100
   println("")
   println("precision@5 for all baskets: $precisionAtFivePercent")
@@ -191,13 +189,13 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
   # Compute precision@5 for each basket size
   for basketSize in sort(collect(keys(basketSizeResultsDict)))
     basketSizeResult = basketSizeResultsDict[basketSize]
-    hits = length(find(x -> x < 5, basketSizeResult.predictedRanks))
+    hits = length(findall(x -> x < 5, basketSizeResult.predictedRanks))
     precisionAtFivePercent = hits / basketSizeResult.numBasketInstances * 100
     println("For basket size $basketSize, precision@5: $precisionAtFivePercent")
   end
 
   # Compute overall precision@10
-  hits = length(find(x -> x < 10, predictedRanks))
+  hits = length(findall(x -> x < 10, predictedRanks))
   precisionAtTenPercent = hits / numTestInstances * 100
   println("")
   println("precision@10 for all baskets: $precisionAtTenPercent")
@@ -212,13 +210,13 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
   # Compute precision@10 for each basket size
   for basketSize in sort(collect(keys(basketSizeResultsDict)))
     basketSizeResult = basketSizeResultsDict[basketSize]
-    hits = length(find(x -> x < 10, basketSizeResult.predictedRanks))
+    hits = length(findall(x -> x < 10, basketSizeResult.predictedRanks))
     precisionAtTenPercent = hits / basketSizeResult.numBasketInstances * 100
     println("For basket size $basketSize, precision@10: $precisionAtTenPercent")
   end
 
   # Compute overall precision@20
-  hits = length(find(x -> x < 20, predictedRanks))
+  hits = length(findall(x -> x < 20, predictedRanks))
   precisionAtTwentyPercent = hits / numTestInstances * 100
   println("")
   println("precision@20 for all baskets: $precisionAtTwentyPercent")
@@ -233,7 +231,7 @@ function computePredictionMetricsSparseVectorData(trainingBasketsDictFileName, t
   # Compute precision@20 for each basket size
   for basketSize in sort(collect(keys(basketSizeResultsDict)))
     basketSizeResult = basketSizeResultsDict[basketSize]
-    hits = length(find(x -> x < 20, basketSizeResult.predictedRanks))
+    hits = length(findall(x -> x < 20, basketSizeResult.predictedRanks))
     precisionAtTwentyPercent = hits / basketSizeResult.numBasketInstances * 100
     println("For basket size $basketSize, precision@20: $precisionAtTwentyPercent")
   end

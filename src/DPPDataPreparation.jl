@@ -1,9 +1,10 @@
-using JLD
-using Base.Random.uuid1
+using DelimitedFiles
+using Random
+using Serialization
 
 export Basket, convertSparseCsvToBaskets, convertBasketsToSparseCsv
 
-type Basket
+struct Basket
   basketItems::Vector{Int}
   heldOutItem::Int
   numItemsInCatalog::Int
@@ -13,7 +14,9 @@ end
 # (sparse vector representation) expected by the DPP learning implementation
 function convertSparseCsvToBaskets(csvBasketDataFileName,
   trainingBasketsDictFileName, testBasketsDictFileName, trainingSetSizePercent)
-  csvBasketData = readcsv(csvBasketDataFileName)
+  Random.seed!(1234)
+
+  csvBasketData = readdlm(csvBasketDataFileName, ',')
   numCsvRecords = size(csvBasketData, 1)
   numCsvColumns = size(csvBasketData, 2)
   numItems = 0
@@ -79,7 +82,6 @@ function convertSparseCsvToBaskets(csvBasketDataFileName,
   trainingBasketsDict = Dict{Int, Basket}()
   testBasketsDict = Dict{Int, Basket}()
   numBaskets = length(collect(keys(basketItemsDict)))
-  # trainingSetSizePercent = 0.8
   trainingSetNumBaskets = convert(Int, round(numBaskets * trainingSetSizePercent));
   testSetNumBaskets = numBaskets - trainingSetNumBaskets
   shuffledBasketItemsDictKeys = shuffle(collect(keys(basketItemsDict)))
@@ -101,16 +103,10 @@ function convertSparseCsvToBaskets(csvBasketDataFileName,
   println("Num baskets in training set: $(length(collect(keys(trainingBasketsDict))))")
   println("Num baskets in test set: $(length(collect(keys(testBasketsDict))))")
 
-  jldopen(trainingBasketsDictFileName, "w") do file
-    addrequire(file, LowRankDPP)
-    write(file, "trainingBasketsDict", trainingBasketsDict)
-  end
+  open(f -> serialize(f, trainingBasketsDict), trainingBasketsDictFileName, "w");
   println("Saved trainingBasketsDict")
 
-  jldopen(testBasketsDictFileName, "w") do file
-    addrequire(file, LowRankDPP)
-    write(file, "testBasketsDict", testBasketsDict)
-  end
+  open(f -> serialize(f, testBasketsDict), testBasketsDictFileName, "w");
   println("Saved testBasketsDict")
 end
 
