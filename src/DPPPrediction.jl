@@ -144,9 +144,9 @@ function computeNextSingletonProbsConditionalKDPPLowRankDual!(
     itemIdsToKMatrixItemsObservedRowColIndices =
     conditionDPPOnItemsObservedLowRankDual(itemTraitMatrix, itemsObserved)
 
-  eigenDecomp = eigfact(Symmetric(cMatrixConditionedOnItemsObserved))
-  eigenVals = eigenDecomp[:values]
-  eigenVecs = eigenDecomp[:vectors]
+  eigenDecomp = eigen(Symmetric(cMatrixConditionedOnItemsObserved))
+  eigenVals = eigenDecomp.values
+  eigenVecs = eigenDecomp.vectors
   rankItemTraitMatrix = size(itemTraitMatrix, 2)
 
   # Precompute terms used in computing probability of observing nextItemIds below
