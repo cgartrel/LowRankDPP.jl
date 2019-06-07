@@ -137,8 +137,7 @@ end
 # conditional DPP L matrix is computed using the dual low-rank representation
 # of the L matrix, which significantly improves runtime performance.
 function computeNextSingletonProbsConditionalKDPPLowRankDual!(
-  itemTraitMatrix::Matrix{Float64}, itemsObserved::Vector{Int64},
-  nextItems::Vector{Int64}, numAllItems, nextItemsProbs::Dict{Int64,Float64})
+  itemTraitMatrix, itemsObserved, nextItems, numAllItems, nextItemsProbs)
 
   cMatrixConditionedOnItemsObserved, itemTraitMatrixBConditionedOnItemsObserved,
     itemIdsToKMatrixItemsObservedRowColIndices =
@@ -150,7 +149,7 @@ function computeNextSingletonProbsConditionalKDPPLowRankDual!(
   rankItemTraitMatrix = size(itemTraitMatrix, 2)
 
   # Precompute terms used in computing probability of observing nextItemIds below
-  coefficient = Vector{Float64}(rankItemTraitMatrix)
+  coefficient = Vector{Float64}(undef, rankItemTraitMatrix)
   for n = 1:rankItemTraitMatrix
     coefficient[n] = (eigenVals[n] / (eigenVals[n] + 1)) * (1 / eigenVals[n])
   end
